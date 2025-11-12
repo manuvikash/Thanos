@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Customer onboarding role for Thanos audit access'
+
+Parameters:
+  TrustedAccountId:
+    Type: String
+    Description: AWS Account ID of the Thanos service
+    AllowedPattern: '[0-9]{12}'
+  
+  ExternalId:
+    Type: String
+    Description: External ID for additional security (optional but recommended)
+    Default: ''
+
+Conditions:
+  UseExternalId: !Not [!Equals [!Ref ExternalId, '']]
+
+Resources:
+  AuditRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudGoldenGuardAuditRole
+      Description: Read-only role for Thanos configuration audits
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${TrustedAccountId}:root'
+            Action: 'sts:AssumeRole'
+            Condition: !If
+              - UseExternalId
+              - StringEquals:
+                  'sts:ExternalId': !Ref ExternalId
+              - !Ref AWS::NoValue
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecurityAudit
+      Policies:
+        - PolicyName: AdditionalReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketPublicAccessBlock'
+                  - 's3:GetBucketPolicyStatus'
+                  - 's3:GetAccountPublicAccessBlock'
+                  - 'iam:GetPolicyVersion'
+                  - 'ec2:DescribeSecurityGroups'
+                  - 'ec2:DescribeSecurityGroupRules'
+                Resource: '*'
+      Tags:
+        - Key: Purpose
+          Value: CloudGoldenGuardAudit
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  RoleArn:
+    Description: ARN of the created audit role
+    Value: !GetAtt AuditRole.Arn
+    Export:
+      Name: CloudGoldenGuardAuditRoleArn
+  
+  RoleName:
+    Description: Name of the created audit role
+    Value: !Ref AuditRole

@@ -1,0 +1,75 @@
+rules:
+  - id: s3-public-acls-blocked
+    resource_type: AWS::S3::Bucket
+    selector: {}
+    check:
+      type: equals
+      path: PublicAccessBlockConfiguration.BlockPublicAcls
+      expected: true
+    severity: HIGH
+    message: "S3 buckets must block public ACLs"
+
+  - id: s3-ignore-public-acls
+    resource_type: AWS::S3::Bucket
+    selector: {}
+    check:
+      type: equals
+      path: PublicAccessBlockConfiguration.IgnorePublicAcls
+      expected: true
+    severity: HIGH
+    message: "S3 buckets must ignore public ACLs"
+
+  - id: s3-block-public-policy
+    resource_type: AWS::S3::Bucket
+    selector: {}
+    check:
+      type: equals
+      path: PublicAccessBlockConfiguration.BlockPublicPolicy
+      expected: true
+    severity: HIGH
+    message: "S3 buckets must block public bucket policies"
+
+  - id: s3-restrict-public-buckets
+    resource_type: AWS::S3::Bucket
+    selector: {}
+    check:
+      type: equals
+      path: PublicAccessBlockConfiguration.RestrictPublicBuckets
+      expected: true
+    severity: HIGH
+    message: "S3 buckets must restrict public bucket access"
+
+  - id: iam-no-admin-star
+    resource_type: AWS::IAM::Policy
+    selector: {}
+    check:
+      type: forbidden-any
+      path: PolicyDocument.Statement[*].Action
+      forbidden:
+        - "*"
+    severity: CRITICAL
+    message: "IAM policies must not grant wildcard (*) permissions"
+
+  - id: sg-no-ssh-public
+    resource_type: AWS::EC2::SecurityGroup
+    selector: {}
+    check:
+      type: forbidden-cidr-port
+      path: IpPermissions
+      params:
+        port: 22
+        cidr: "0.0.0.0/0"
+    severity: HIGH
+    message: "Security groups must not allow SSH (port 22) from 0.0.0.0/0"
+
+  - id: sg-no-rdp-public
+    resource_type: AWS::EC2::SecurityGroup
+    selector: {}
+    check:
+      type: forbidden-cidr-port
+      path: IpPermissions
+      params:
+        port: 3389
+        cidr: "0.0.0.0/0"
+    severity: HIGH
+    message: "Security groups must not allow RDP (port 3389) from 0.0.0.0/0"
