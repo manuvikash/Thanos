@@ -86,6 +86,17 @@ tf-apply: package-lambdas
 
 tf-destroy:
 	@echo "Destroying Terraform resources..."
+	@echo "Emptying S3 buckets (including versions)..."
+	@cd infra && for bucket in $$(terraform state list | grep 'aws_s3_bucket\.' | grep -v policy | grep -v versioning | grep -v public_access | grep -v encryption | grep -v website | grep -v server_side); do \
+		bucket_name=$$(terraform state show $$bucket 2>/dev/null | grep -E "^\s*bucket\s*=" | head -1 | cut -d'"' -f2); \
+		if [ -n "$$bucket_name" ]; then \
+			echo "Emptying $$bucket_name..."; \
+			aws s3 rm s3://$$bucket_name --recursive 2>/dev/null || true; \
+			echo "Deleting all versions in $$bucket_name..."; \
+			python3 -c "import boto3; s3=boto3.resource('s3'); bucket=s3.Bucket('$$bucket_name'); bucket.object_versions.all().delete()" 2>/dev/null || true; \
+		fi; \
+	done
+	@echo "Running terraform destroy..."
 	cd infra && terraform destroy
 
 web-dev:
