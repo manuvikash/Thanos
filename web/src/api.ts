@@ -54,6 +54,25 @@ export interface Customer {
   status: string;
 }
 
+export interface ResourceDetail {
+  arn: string;
+  resource_type: string;
+  region: string;
+  account_id: string;
+  config: any;
+  metadata: any;
+}
+
+export interface ResourcesResponse {
+  tenant_id: string;
+  snapshot_key: string;
+  resources: ResourceDetail[];
+  totals: {
+    total_resources: number;
+    by_type: Record<string, number>;
+  };
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
   const headers = {
     'Content-Type': 'application/json',
@@ -106,4 +125,16 @@ export async function getCustomers(): Promise<Customer[]> {
     console.error('Failed to fetch customers:', error);
     throw error;
   }
+}
+
+export async function getResources(
+  tenantId: string,
+  snapshotKey: string
+): Promise<ResourcesResponse> {
+  const params = new URLSearchParams({
+    tenant_id: tenantId,
+    snapshot_key: snapshotKey,
+  });
+
+  return fetchAPI(`/resources?${params.toString()}`);
 }

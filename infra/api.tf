@@ -76,6 +76,33 @@ resource "aws_lambda_permission" "findings" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
+# Lambda integration for resources handler
+resource "aws_apigatewayv2_integration" "resources" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = aws_lambda_function.resources_handler.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "resources" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /resources"
+  target    = "integrations/${aws_apigatewayv2_integration.resources.id}"
+
+  authorization_type = "CUSTOM"
+  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+}
+
+resource "aws_lambda_permission" "resources" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.resources_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
 # API Key authorizer Lambda
 resource "aws_iam_role" "authorizer" {
   name = "${local.name_prefix}-authorizer"

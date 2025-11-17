@@ -42,19 +42,19 @@ export default function CustomerSelector({ onCustomerSelect, selectedCustomer }:
 
   if (loading) {
     return (
-      <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
-        <div className="text-gray-400 text-sm">Loading customers...</div>
+      <div className="mb-4 p-4 bg-[#102020]/50 border border-neutral-800 rounded-lg backdrop-blur-sm">
+        <div className="text-neutral-400 text-sm">Loading customers...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+      <div className="mb-4 p-4 bg-[#102020]/50 border border-neutral-800 rounded-lg backdrop-blur-sm">
         <div className="text-red-400 text-sm mb-2">{error}</div>
         <button
           onClick={fetchCustomers}
-          className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded transition duration-200"
+          className="text-sm bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-2 px-4 rounded-md transition-colors"
         >
           Retry
         </button>
@@ -64,21 +64,21 @@ export default function CustomerSelector({ onCustomerSelect, selectedCustomer }:
 
   if (customers.length === 0) {
     return (
-      <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
-        <div className="text-gray-400 text-sm">No customers registered yet. Use manual entry below.</div>
+      <div className="mb-4 p-4 bg-[#102020]/50 border border-neutral-800 rounded-lg backdrop-blur-sm">
+        <div className="text-neutral-400 text-sm">No customers registered yet. Use manual entry below.</div>
       </div>
     )
   }
 
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-300 mb-1">
+      <label className="block text-sm font-medium text-neutral-300 mb-2">
         Select Customer (Optional)
       </label>
       <select
         value={selectedCustomer?.tenant_id || ''}
         onChange={handleChange}
-        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-4 py-3 bg-[#0C1A1A] border border-neutral-700 rounded-md text-neutral-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
       >
         <option value="">-- Manual Entry --</option>
         {customers.map(customer => (
