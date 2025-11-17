@@ -4,6 +4,8 @@ A minimal AWS configuration drift detector that connects to customer AWS account
 
 ## Features
 
+- **Customer self-registration** via dedicated Customer Portal
+- **Dropdown-based customer selection** in Admin Portal for streamlined scanning
 - **AssumeRole-based access** to customer AWS accounts
 - **Resource collection** for S3, IAM, and Security Groups
 - **YAML-based golden rules** with flexible evaluation engine
@@ -14,27 +16,53 @@ A minimal AWS configuration drift detector that connects to customer AWS account
 ## Architecture
 
 ```
-┌─────────────┐
-│   Web UI    │ (React + Vite)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ API Gateway │ (HTTP API + API Key Auth)
-└──────┬──────┘
-       │
-       ├─────────────────┬─────────────────┐
-       ▼                 ▼                 ▼
-┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-│   Scan      │   │  Findings   │   │ Authorizer  │
-│  Lambda     │   │   Lambda    │   │   Lambda    │
-└──────┬──────┘   └──────┬──────┘   └─────────────┘
-       │                 │
-       ▼                 ▼
-┌─────────────┐   ┌─────────────┐
-│ S3 Buckets  │   │  DynamoDB   │
-│ (Snapshots) │   │  (Findings) │
-└─────────────┘   └─────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        Thanos AWS Account                         │
+│                                                                    │
+│  ┌──────────────────┐                  ┌──────────────────┐     │
+│  │ Customer Portal  │                  │  Admin Portal    │     │
+│  │   (S3 + CF)      │                  │  (Enhanced UI)   │     │
+│  └────────┬─────────┘                  └────────┬─────────┘     │
+│           │                                      │                │
+│           │ POST /customers/register             │ GET /customers│
+│           │ (no auth)                            │ (API key)     │
+│           │                                      │                │
+│           └──────────────┬───────────────────────┘                │
+│                          ▼                                        │
+│                  ┌───────────────┐                                │
+│                  │  API Gateway  │                                │
+│                  └───────┬───────┘                                │
+│                          │                                        │
+│      ┌───────────────────┼───────────────────┐                   │
+│      ▼                   ▼                   ▼                    │
+│  ┌────────┐      ┌─────────────┐      ┌──────────┐              │
+│  │ Reg.   │      │  Customers  │      │   Scan   │              │
+│  │ Lambda │      │   Lambda    │      │  Lambda  │              │
+│  └───┬────┘      └──────┬──────┘      └────┬─────┘              │
+│      │                  │                   │                     │
+│      └──────────┬───────┘                   │                     │
+│                 ▼                           ▼                     │
+│         ┌──────────────┐            ┌─────────────┐              │
+│         │  Customers   │            │ S3 Buckets  │              │
+│         │  DynamoDB    │            │ (Snapshots) │              │
+│         └──────────────┘            └─────────────┘              │
+│                                                                    │
+│      ┌──────────────┐      ┌─────────────┐                       │
+│      │  Findings    │      │ Authorizer  │                       │
+│      │   Lambda     │      │   Lambda    │                       │
+│      └──────┬───────┘      └─────────────┘                       │
+│             ▼                                                     │
+│      ┌─────────────┐                                              │
+│      │  DynamoDB   │                                              │
+│      │  (Findings) │                                              │
+│      └─────────────┘                                              │
+└──────────────────────────────────────────────────────────────────┘
+
+Customer Flow:
+1. Deploy CloudFormation in their AWS account
+2. Access Customer Portal URL
+3. Register account details (tenant_id, role_arn, etc.)
+4. Admin selects customer from dropdown to run scans
 ```
 
 ## Prerequisites
@@ -101,15 +129,32 @@ make deploy-web
 
 Access via the `web_url` from Terraform outputs.
 
-## Customer Onboarding
+## Customer Management Workflow
 
-To allow the system to scan a customer AWS account, deploy the CloudFormation template in their account:
+Thanos now features a streamlined customer management system that eliminates manual credential entry.
+
+### For Administrators
+
+After deploying Thanos infrastructure, retrieve the Customer Portal URL:
+
+```bash
+cd infra
+terraform output customer_portal_url
+```
+
+Share this URL with customers for self-service registration.
+
+### For Customers
+
+**Step 1: Deploy CloudFormation Stack**
+
+Deploy the audit role in your AWS account:
 
 ```bash
 aws cloudformation create-stack \
   --stack-name CloudGoldenGuardAuditRole \
   --template-body file://cfn/customer-onboarding-role.yaml \
-  --parameters ParameterKey=TrustedAccountId,ParameterValue=<your-account-id> \
+  --parameters ParameterKey=TrustedAccountId,ParameterValue=<thanos-account-id> \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
@@ -121,6 +166,33 @@ aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`RoleArn`].OutputValue' \
   --output text
 ```
+
+**Step 2: Register via Customer Portal**
+
+1. Access the Customer Portal URL provided by your administrator
+2. Fill in the registration form:
+   - **Tenant ID**: Unique identifier for your organization (e.g., `acme-corp`)
+   - **Customer Name**: Your organization name (e.g., `Acme Corporation`)
+   - **Role ARN**: The ARN from Step 1
+   - **Account ID**: Your 12-digit AWS account ID
+   - **Regions**: Select AWS regions to scan
+3. Submit the form
+4. You'll receive a confirmation message upon successful registration
+
+**Step 3: Scanning**
+
+Once registered, administrators can select your organization from a dropdown in the Admin Portal to run scans. No manual credential entry required!
+
+### Using the Admin Portal with Customer Dropdown
+
+1. Open the Admin Portal
+2. Select a customer from the dropdown menu at the top of the scan form
+3. Form fields auto-populate with the customer's registered details
+4. Modify regions if needed (optional)
+5. Click "Run Scan"
+6. View findings in the results table
+
+**Manual Entry Mode**: The Admin Portal still supports manual credential entry for ad-hoc scans. Simply leave the customer dropdown unselected and fill in the form manually.
 
 ## API Usage
 
@@ -213,7 +285,10 @@ cloud-golden-guard/
 ├── infra/                        # Terraform configuration
 │   ├── main.tf
 │   ├── api.tf
+│   ├── api_customers.tf          # Customer management API routes
 │   ├── lambda.tf
+│   ├── lambda_customers.tf       # Customer management Lambdas
+│   ├── customers.tf              # Customer DynamoDB table & portal
 │   ├── dynamodb.tf
 │   ├── s3.tf
 │   ├── variables.tf
@@ -221,12 +296,19 @@ cloud-golden-guard/
 ├── lambdas/
 │   ├── common/                   # Shared utilities
 │   │   ├── aws.py
+│   │   ├── customer_models.py    # Customer data models
 │   │   ├── eval.py
 │   │   ├── models.py
 │   │   ├── normalize.py
 │   │   ├── s3io.py
 │   │   ├── ddb.py
 │   │   └── logging.py
+│   ├── registration_handler/     # Customer registration Lambda
+│   │   ├── app.py
+│   │   └── requirements.txt
+│   ├── customers_handler/        # Customer list Lambda
+│   │   ├── app.py
+│   │   └── requirements.txt
 │   ├── scan_handler/             # Scan Lambda
 │   │   ├── app.py
 │   │   ├── requirements.txt
@@ -239,16 +321,31 @@ cloud-golden-guard/
 │       └── authorizer.py
 ├── rules/
 │   └── default.rules.yaml        # Default golden rules
-├── web/                          # React web UI
+├── customer-portal/              # Customer registration portal
 │   ├── src/
 │   │   ├── components/
+│   │   │   └── RegistrationForm.tsx
 │   │   ├── api.ts
 │   │   ├── App.tsx
 │   │   └── main.tsx
 │   ├── package.json
 │   └── vite.config.ts
+├── web/                          # Admin Portal (React web UI)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── CustomerSelector.tsx  # Customer dropdown
+│   │   │   ├── ScanForm.tsx
+│   │   │   └── FindingsTable.tsx
+│   │   ├── api.ts
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
+├── docs/
+│   └── CUSTOMER_ONBOARDING.md    # Detailed customer onboarding guide
 ├── Makefile
-└── README.md
+├── README.md
+└── QUICKSTART.md
 ```
 
 ## Verification Checklist
@@ -258,13 +355,16 @@ After deployment, verify the system works:
 - [ ] Terraform apply completed successfully
 - [ ] API Gateway URL is accessible
 - [ ] API key authentication works
-- [ ] Lambda functions are deployed
-- [ ] DynamoDB table exists
-- [ ] S3 buckets are created
+- [ ] Lambda functions are deployed (scan, findings, registration, customers)
+- [ ] DynamoDB tables exist (findings, customers)
+- [ ] S3 buckets are created (snapshots, customer portal)
+- [ ] Customer Portal URL is accessible
+- [ ] Customer registration works via portal
+- [ ] Admin Portal loads customer dropdown
+- [ ] Customer selection auto-populates form fields
 - [ ] Customer role can be assumed
 - [ ] Scan endpoint returns results
 - [ ] Findings endpoint returns data
-- [ ] Web UI loads and displays data
 
 ### Test Scan (Manual)
 
@@ -307,6 +407,38 @@ make tf-destroy
 - **Encryption**: S3 buckets use AES256, consider KMS
 
 ## Troubleshooting
+
+### Customer Registration Issues
+
+**"Customer with tenant_id already exists"**
+- The tenant_id must be unique. Choose a different identifier.
+
+**Registration form validation errors**
+- Ensure tenant_id is 3-50 characters, alphanumeric and hyphens only
+- Verify role ARN follows format: `arn:aws:iam::123456789012:role/RoleName`
+- Account ID must be exactly 12 digits
+- At least one region must be selected
+
+**Customer Portal not loading**
+- Verify the Customer Portal URL from `terraform output customer_portal_url`
+- Check CloudFront distribution status (may take 5-10 minutes after deployment)
+- Clear browser cache and try again
+
+### Admin Portal Issues
+
+**Customer dropdown is empty**
+- Verify customers have registered via the Customer Portal
+- Check API key is configured in `web/.env`
+- Check browser console for API errors
+- Verify `/customers` endpoint returns data:
+  ```bash
+  curl "$API_URL/customers" -H "x-api-key: $API_KEY"
+  ```
+
+**Customer selection not auto-populating fields**
+- Check browser console for JavaScript errors
+- Verify customer data includes all required fields
+- Try refreshing the page
 
 ### Lambda Timeout
 

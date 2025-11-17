@@ -1,19 +1,86 @@
-import { useState, FormEvent } from 'react'
-import { runScan, Finding } from '../api'
+import { useState, FormEvent, useEffect } from 'react'
+import { runScan, Finding, Customer } from '../api'
+import CustomerSelector from './CustomerSelector'
 
 interface ScanFormProps {
   onScanComplete: (findings: Finding[], stats: { resources: number; findings: number }, tenantId: string) => void
   onLoadingChange: (loading: boolean) => void
 }
 
+const AWS_REGIONS = [
+  'us-east-1',
+  'us-east-2',
+  'us-west-1',
+  'us-west-2',
+  'eu-west-1',
+  'eu-west-2',
+  'eu-west-3',
+  'eu-central-1',
+  'eu-north-1',
+  'ap-northeast-1',
+  'ap-northeast-2',
+  'ap-northeast-3',
+  'ap-southeast-1',
+  'ap-southeast-2',
+  'ap-south-1',
+  'ca-central-1',
+  'sa-east-1',
+]
+
 export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormProps) {
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [tenantId, setTenantId] = useState('')
   const [roleArn, setRoleArn] = useState('')
   const [accountId, setAccountId] = useState('')
   const [regions, setRegions] = useState('us-east-1')
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(['us-east-1'])
+  const [useDropdown, setUseDropdown] = useState(false)
   const [rulesSource, setRulesSource] = useState<'repo' | 's3'>('repo')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      setTenantId(selectedCustomer.tenant_id)
+      setRoleArn(selectedCustomer.role_arn)
+      setAccountId(selectedCustomer.account_id)
+      setRegions(selectedCustomer.regions.join(', '))
+      setSelectedRegions(selectedCustomer.regions)
+      setUseDropdown(true)
+    }
+  }, [selectedCustomer])
+
+  const handleClearSelection = () => {
+    setSelectedCustomer(null)
+    setTenantId('')
+    setRoleArn('')
+    setAccountId('')
+    setRegions('us-east-1')
+    setSelectedRegions(['us-east-1'])
+    setUseDropdown(false)
+  }
+
+  const handleRegionToggle = (region: string) => {
+    setSelectedRegions(prev => {
+      if (prev.includes(region)) {
+        return prev.filter(r => r !== region)
+      } else {
+        return [...prev, region]
+      }
+    })
+  }
+
+  const toggleRegionMode = () => {
+    if (!useDropdown) {
+      // Switching to dropdown mode
+      const regionList = regions.split(',').map(r => r.trim()).filter(r => r)
+      setSelectedRegions(regionList.length > 0 ? regionList : ['us-east-1'])
+    } else {
+      // Switching to manual mode
+      setRegions(selectedRegions.join(', '))
+    }
+    setUseDropdown(!useDropdown)
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -22,7 +89,9 @@ export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormPr
     onLoadingChange(true)
 
     try {
-      const regionList = regions.split(',').map(r => r.trim()).filter(r => r)
+      const regionList = useDropdown 
+        ? selectedRegions 
+        : regions.split(',').map(r => r.trim()).filter(r => r)
       
       const response = await runScan({
         tenant_id: tenantId,
@@ -41,9 +110,28 @@ export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormPr
     }
   }
 
+  const isCustomerSelected = selectedCustomer !== null
+
   return (
     <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
       <h2 className="text-2xl font-semibold mb-4 text-blue-400">Run Scan</h2>
+      
+      <CustomerSelector 
+        onCustomerSelect={setSelectedCustomer}
+        selectedCustomer={selectedCustomer}
+      />
+
+      {isCustomerSelected && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="text-sm text-blue-400 hover:text-blue-300 underline"
+          >
+            Clear Selection (Manual Entry)
+          </button>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -57,6 +145,8 @@ export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormPr
             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="customer-123"
             required
+            readOnly={isCustomerSelected}
+            disabled={isCustomerSelected}
           />
         </div>
 
@@ -71,6 +161,8 @@ export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormPr
             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="arn:aws:iam::123456789012:role/AuditRole"
             required
+            readOnly={isCustomerSelected}
+            disabled={isCustomerSelected}
           />
         </div>
 
@@ -85,20 +177,53 @@ export default function ScanForm({ onScanComplete, onLoadingChange }: ScanFormPr
             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="123456789012"
             required
+            readOnly={isCustomerSelected}
+            disabled={isCustomerSelected}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Regions (comma-separated)
-          </label>
-          <input
-            type="text"
-            value={regions}
-            onChange={(e) => setRegions(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="us-east-1, us-west-2"
-          />
+          <div className="flex justify-between items-center mb-1">
+            <label className="block text-sm font-medium text-gray-300">
+              Regions
+            </label>
+            {!isCustomerSelected && (
+              <button
+                type="button"
+                onClick={toggleRegionMode}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                {useDropdown ? 'Switch to Manual Entry' : 'Switch to Dropdown'}
+              </button>
+            )}
+          </div>
+          
+          {useDropdown ? (
+            <div className="bg-gray-700 border border-gray-600 rounded-md p-3 max-h-48 overflow-y-auto">
+              {AWS_REGIONS.map(region => (
+                <label key={region} className="flex items-center mb-2 cursor-pointer hover:bg-gray-600 p-1 rounded">
+                  <input
+                    type="checkbox"
+                    checked={selectedRegions.includes(region)}
+                    onChange={() => handleRegionToggle(region)}
+                    disabled={isCustomerSelected}
+                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-500 rounded"
+                  />
+                  <span className="text-sm text-gray-100">{region}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={regions}
+              onChange={(e) => setRegions(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="us-east-1, us-west-2"
+              readOnly={isCustomerSelected}
+              disabled={isCustomerSelected}
+            />
+          )}
         </div>
 
         <div>

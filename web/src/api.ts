@@ -44,6 +44,16 @@ export interface FindingsResponse {
   next_cursor?: string;
 }
 
+export interface Customer {
+  tenant_id: string;
+  customer_name: string;
+  role_arn: string;
+  account_id: string;
+  regions: string[];
+  created_at: string;
+  status: string;
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
   const headers = {
     'Content-Type': 'application/json',
@@ -86,4 +96,14 @@ export async function getFindings(
   }
 
   return fetchAPI(`/findings?${params.toString()}`);
+}
+
+export async function getCustomers(): Promise<Customer[]> {
+  try {
+    const response = await fetchAPI('/customers');
+    return response.customers || [];
+  } catch (error) {
+    console.error('Failed to fetch customers:', error);
+    throw error;
+  }
 }
