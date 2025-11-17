@@ -4,6 +4,7 @@ Assumes role, collects resources, evaluates against rules, stores findings.
 """
 import json
 import os
+import boto3
 import sys
 from datetime import datetime
 from typing import Any, Dict
@@ -24,6 +25,37 @@ logger = get_logger(__name__)
 SNAPSHOTS_BUCKET = os.environ.get("SNAPSHOTS_BUCKET", "")
 RULES_BUCKET = os.environ.get("RULES_BUCKET", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
+SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
+sns_client = boto3.client("sns")
+
+def publish_critical_alert(finding):
+    """
+    Publish a simple message when a high-severity finding is detected.
+    `finding` is expected to be a dict with keys like tenant_id, rule_id, severity, details, etc.
+    """
+    if not SNS_TOPIC_ARN:
+        # Topic not configured; silently skip to avoid breaking scans
+        return
+
+    subject = f"[CRITICAL] Finding: {finding.get('rule_id', 'unknown')}"
+    message = {
+        "tenant_id": finding.get("tenant_id"),
+        "rule_id": finding.get("rule_id"),
+        "severity": finding.get("severity"),
+        "timestamp": finding.get("timestamp"),
+        "details": finding.get("details"),
+    }
+
+    # SNS email subject must be <= 100 chars; body is plaintext, so json-dump
+    try:
+        sns_client.publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Subject=subject[:100],
+            Message=json.dumps(message, default=str)
+        )
+    except Exception as e:
+        # Don't fail the whole scan on alert errors; just log
+        print(f"SNS publish failed: {e}")
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -133,6 +165,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Step 6: Write findings to DynamoDB
         if findings:
             put_findings(FINDINGS_TABLE, findings)
+            for f in findings:
+                fd = f.to_dict() if hasattr(f, "to_dict") else f
+                if str(fd.get("severity", "")).lower() == "high":
+                    publish_critical_alert(fd)
         
         # Prepare response
         findings_sample = [f.to_dict() for f in findings[:10]]

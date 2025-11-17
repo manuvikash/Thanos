@@ -34,6 +34,10 @@ cd infra
 terraform init
 terraform apply  # Type 'yes'
 
+# (Optional) Enable email alerts for critical findings
+terraform apply -var="alert_email=you@example.com"
+# Then confirm the email you receive
+
 # Save API credentials
 terraform output -raw api_key > ../api_key.txt
 ```
