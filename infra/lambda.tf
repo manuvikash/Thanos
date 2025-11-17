@@ -59,6 +59,13 @@ resource "aws_iam_role_policy" "scan_handler" {
           "dynamodb:BatchWriteItem"
         ]
         Resource = aws_dynamodb_table.findings.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = "${aws_sns_topic.critical_findings_alerts.arn}"
       }
     ]
   })
@@ -80,6 +87,7 @@ resource "aws_lambda_function" "scan_handler" {
       SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
       RULES_BUCKET     = aws_s3_bucket.rules.id
       FINDINGS_TABLE   = aws_dynamodb_table.findings.name
+      ALERTS_TOPIC_ARN = aws_sns_topic.critical_findings_alerts.arn
     }
   }
   
