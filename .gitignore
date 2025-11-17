@@ -58,3 +58,6 @@ Thumbs.db
 # Node (web)
 web/node_modules/
 web/dist/
+
+# Applicaiton specific
+api_key.txt
