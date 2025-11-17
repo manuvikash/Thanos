@@ -44,6 +44,7 @@ test:
 
 package-lambdas:
 	@echo "Packaging Lambda functions..."
+	@rm -rf dist/
 	@mkdir -p dist
 	
 	@echo "Packaging scan_handler..."
@@ -52,7 +53,7 @@ package-lambdas:
 	@cp -r lambdas/scan_handler/*.py dist/scan_handler_build/
 	@cp -r rules dist/scan_handler_build/
 	@pip install -r lambdas/scan_handler/requirements.txt -t dist/scan_handler_build/ --quiet
-	@cd dist/scan_handler_build && powershell Compress-Archive -Path * -DestinationPath ../scan_handler.zip -Force
+	@cd dist/scan_handler_build && zip -r ../scan_handler.zip . -q
 	@rm -rf dist/scan_handler_build
 	
 	@echo "Packaging findings_handler..."
@@ -60,13 +61,13 @@ package-lambdas:
 	@cp -r lambdas/common dist/findings_handler_build/
 	@cp -r lambdas/findings_handler/*.py dist/findings_handler_build/
 	@pip install -r lambdas/findings_handler/requirements.txt -t dist/findings_handler_build/ --quiet
-	@cd dist/findings_handler_build && powershell Compress-Archive -Path * -DestinationPath ../findings_handler.zip -Force
+	@cd dist/findings_handler_build && zip -r ../findings_handler.zip . -q
 	@rm -rf dist/findings_handler_build
 	
 	@echo "Packaging authorizer..."
 	@mkdir -p dist/authorizer_build
 	@cp lambdas/authorizer/authorizer.py dist/authorizer_build/
-	@cd dist/authorizer_build && powershell Compress-Archive -Path * -DestinationPath ../authorizer.zip -Force
+	@cd dist/authorizer_build && zip -r ../authorizer.zip . -q
 	@rm -rf dist/authorizer_build
 	
 	@echo "Lambda packages created in dist/"
