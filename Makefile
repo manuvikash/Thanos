@@ -1,4 +1,4 @@
-.PHONY: help fmt test package-lambdas tf-init tf-plan tf-apply tf-destroy web-dev web-build deploy-web clean cleanup-all estimate-costs
+.PHONY: help fmt test package-lambdas tf-init tf-plan tf-apply tf-destroy web-dev web-build deploy-web customer-portal-build deploy-customer-portal clean cleanup-all estimate-costs
 
 help:
 	@echo "Cloud Golden Guard - Makefile Commands"
@@ -18,8 +18,10 @@ help:
 	@echo "  make tf-destroy       - Destroy Terraform resources"
 	@echo ""
 	@echo "Deployment:"
-	@echo "  make web-build        - Build web UI for production"
-	@echo "  make deploy-web       - Deploy web UI to S3"
+	@echo "  make web-build                - Build admin web UI for production"
+	@echo "  make deploy-web               - Deploy admin web UI to S3"
+	@echo "  make customer-portal-build    - Build customer portal for production"
+	@echo "  make deploy-customer-portal   - Deploy customer portal to S3"
 	@echo ""
 	@echo "Cost Management:"
 	@echo "  make estimate-costs   - Estimate current AWS costs"
@@ -69,6 +71,26 @@ package-lambdas:
 	@cp lambdas/authorizer/authorizer.py dist/authorizer_build/
 	@cd dist/authorizer_build && zip -r ../authorizer.zip . -q
 	@rm -rf dist/authorizer_build
+	
+	@echo "Packaging registration_handler..."
+	@mkdir -p dist/registration_handler_build
+	@cp -r lambdas/common dist/registration_handler_build/
+	@cp lambdas/registration_handler/app.py dist/registration_handler_build/
+	@cd dist/registration_handler_build && zip -r ../registration_handler.zip . -q
+	@rm -rf dist/registration_handler_build
+	
+	@echo "Packaging customers_handler..."
+	@mkdir -p dist/customers_handler_build
+	@cp lambdas/customers_handler/app.py dist/customers_handler_build/
+	@cd dist/customers_handler_build && zip -r ../customers_handler.zip . -q
+	@rm -rf dist/customers_handler_build
+	
+	@echo "Packaging resources_handler..."
+	@mkdir -p dist/resources_handler_build
+	@cp -r lambdas/common dist/resources_handler_build/
+	@cp lambdas/resources_handler/app.py dist/resources_handler_build/
+	@cd dist/resources_handler_build && zip -r ../resources_handler.zip . -q
+	@rm -rf dist/resources_handler_build
 	
 	@echo "Lambda packages created in dist/"
 
@@ -120,11 +142,30 @@ deploy-web: web-build
 	aws s3 sync web/dist/ s3://$(WEB_BUCKET)/ --delete
 	@echo "Web UI deployed successfully"
 
+customer-portal-build:
+	@echo "Building customer portal..."
+	cd customer-portal && npm run build
+
+deploy-customer-portal: customer-portal-build
+	@echo "Deploying customer portal to S3..."
+	@echo "Getting bucket name from Terraform..."
+	$(eval CUSTOMER_PORTAL_BUCKET := $(shell cd infra && terraform output -raw customer_portal_bucket 2>/dev/null || echo ""))
+	@if [ -z "$(CUSTOMER_PORTAL_BUCKET)" ]; then \
+		echo "Error: Could not get customer portal bucket name from Terraform"; \
+		echo "Make sure customer portal infrastructure is uncommented in infra/customers.tf"; \
+		exit 1; \
+	fi
+	@echo "Deploying to bucket: $(CUSTOMER_PORTAL_BUCKET)"
+	aws s3 sync customer-portal/dist/ s3://$(CUSTOMER_PORTAL_BUCKET)/ --delete
+	@echo "Customer portal deployed successfully"
+
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf dist/
 	rm -rf web/dist/
 	rm -rf web/node_modules/
+	rm -rf customer-portal/dist/
+	rm -rf customer-portal/node_modules/
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete

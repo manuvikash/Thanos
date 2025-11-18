@@ -33,3 +33,19 @@ output "findings_table" {
   description = "DynamoDB findings table"
   value       = aws_dynamodb_table.findings.name
 }
+
+output "customers_table" {
+  description = "Customers DynamoDB table name"
+  value       = aws_dynamodb_table.customers.name
+}
+
+# Commented out - uncomment when customer portal infrastructure is deployed
+# output "customer_portal_url" {
+#   description = "Customer Portal URL"
+#   value       = "https://${aws_cloudfront_distribution.customer_portal.domain_name}"
+# }
+#
+# output "customer_portal_bucket" {
+#   description = "Customer Portal S3 bucket name"
+#   value       = aws_s3_bucket.customer_portal.id
+# }
