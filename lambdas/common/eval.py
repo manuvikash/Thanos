@@ -194,7 +194,7 @@ def evaluate_forbidden_cidr_port(resource: Resource, rule: Rule) -> Optional[Fin
     return None
 
 
-def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str) -> Optional[Finding]:
+def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str, snapshot_key: str = "") -> Optional[Finding]:
     """
     Evaluate a single rule against a resource.
     
@@ -202,6 +202,7 @@ def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str) -> Optional[Fi
         resource: The resource to check
         rule: The rule to evaluate
         tenant_id: Tenant identifier
+        snapshot_key: Snapshot key for grouping findings by scan
         
     Returns:
         Finding if the rule fails, None otherwise
@@ -224,9 +225,10 @@ def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str) -> Optional[Fi
         logger.warning(f"Unknown check type: {check_type}")
         return None
     
-    # Set tenant_id if finding was created
+    # Set tenant_id and snapshot_key if finding was created
     if finding:
         finding.tenant_id = tenant_id
+        finding.snapshot_key = snapshot_key
     
     return finding
 
@@ -235,6 +237,7 @@ def evaluate_resources(
     resources: List[Resource],
     rules: List[Rule],
     tenant_id: str,
+    snapshot_key: str = "",
 ) -> List[Finding]:
     """
     Evaluate all resources against all rules.
@@ -243,6 +246,7 @@ def evaluate_resources(
         resources: List of resources to check
         rules: List of rules to evaluate
         tenant_id: Tenant identifier
+        snapshot_key: Snapshot key for grouping findings by scan
         
     Returns:
         List of findings
@@ -252,7 +256,7 @@ def evaluate_resources(
     for resource in resources:
         for rule in rules:
             try:
-                finding = evaluate_rule(resource, rule, tenant_id)
+                finding = evaluate_rule(resource, rule, tenant_id, snapshot_key)
                 if finding:
                     findings.append(finding)
                     logger.info(

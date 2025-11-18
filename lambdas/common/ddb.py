@@ -117,3 +117,47 @@ def query_findings(
     except ClientError as e:
         logger.error(f"Error querying findings from DynamoDB: {e}")
         raise
+
+
+def query_all_findings(table_name: str, tenant_id: str) -> List[Dict[str, Any]]:
+    """
+    Query all findings for a tenant (handles pagination automatically).
+    
+    Args:
+        table_name: DynamoDB table name
+        tenant_id: Tenant identifier
+        
+    Returns:
+        List of all findings for the tenant
+    """
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(table_name)
+    
+    all_items = []
+    last_evaluated_key = None
+    
+    try:
+        while True:
+            query_params = {
+                "KeyConditionExpression": "tenant_id = :tenant_id",
+                "ExpressionAttributeValues": {":tenant_id": tenant_id},
+            }
+            
+            if last_evaluated_key:
+                query_params["ExclusiveStartKey"] = last_evaluated_key
+            
+            response = table.query(**query_params)
+            
+            items = [dynamodb_to_python(item) for item in response.get("Items", [])]
+            all_items.extend(items)
+            
+            last_evaluated_key = response.get("LastEvaluatedKey")
+            if not last_evaluated_key:
+                break
+        
+        logger.info(f"Queried all {len(all_items)} findings for tenant {tenant_id}")
+        return all_items
+        
+    except ClientError as e:
+        logger.error(f"Error querying all findings from DynamoDB: {e}")
+        raise

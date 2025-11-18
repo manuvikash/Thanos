@@ -41,6 +41,7 @@ test:
 	@echo "Running Python tests..."
 	cd lambdas/scan_handler && python -m pytest tests/ -v || echo "pytest not installed or tests failed"
 	cd lambdas/findings_handler && python -m pytest tests/ -v || echo "pytest not installed or tests failed"
+	cd lambdas/metrics_handler && python -m pytest test_metrics.py -v || echo "pytest not installed or tests failed"
 	@echo "Running TypeScript tests..."
 	cd web && npm test || echo "npm dependencies not installed"
 
@@ -91,6 +92,13 @@ package-lambdas:
 	@cp lambdas/resources_handler/app.py dist/resources_handler_build/
 	@cd dist/resources_handler_build && zip -r ../resources_handler.zip . -q
 	@rm -rf dist/resources_handler_build
+	
+	@echo "Packaging metrics_handler..."
+	@mkdir -p dist/metrics_handler_build
+	@cp -r lambdas/common dist/metrics_handler_build/
+	@cp lambdas/metrics_handler/app.py dist/metrics_handler_build/
+	@cd dist/metrics_handler_build && zip -r ../metrics_handler.zip . -q
+	@rm -rf dist/metrics_handler_build
 	
 	@echo "Lambda packages created in dist/"
 

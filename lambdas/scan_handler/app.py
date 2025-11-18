@@ -142,24 +142,24 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count=len(rules),
         )
         
-        # Step 4: Evaluate resources against rules
-        logger.info("Evaluating resources against rules")
-        findings = evaluate_resources(resources, rules, tenant_id)
-        log_context(
-            logger,
-            "info",
-            "Evaluation complete",
-            tenant_id=tenant_id,
-            findings_count=len(findings),
-        )
-        
-        # Step 5: Write snapshot to S3
+        # Step 4: Write snapshot to S3 first to get snapshot_key
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         snapshot_key = write_snapshot(
             SNAPSHOTS_BUCKET,
             tenant_id,
             [r.to_dict() for r in resources],
             timestamp,
+        )
+        
+        # Step 5: Evaluate resources against rules (with snapshot_key)
+        logger.info("Evaluating resources against rules")
+        findings = evaluate_resources(resources, rules, tenant_id, snapshot_key)
+        log_context(
+            logger,
+            "info",
+            "Evaluation complete",
+            tenant_id=tenant_id,
+            findings_count=len(findings),
         )
         
         # Step 6: Write findings to DynamoDB

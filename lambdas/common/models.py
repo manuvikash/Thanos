@@ -76,6 +76,7 @@ class Finding:
     timestamp: str
     account_id: str
     region: str
+    snapshot_key: str = ""
 
     @classmethod
     def create(
@@ -85,6 +86,7 @@ class Finding:
         resource: Resource,
         observed: Any,
         expected: Any,
+        snapshot_key: str = "",
     ) -> "Finding":
         """Create a new finding."""
         return cls(
@@ -99,6 +101,7 @@ class Finding:
             timestamp=datetime.utcnow().isoformat() + "Z",
             account_id=resource.account_id,
             region=resource.region,
+            snapshot_key=snapshot_key,
         )
 
     def to_dict(self) -> Dict[str, Any]:
