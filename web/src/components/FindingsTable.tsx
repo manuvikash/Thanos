@@ -6,6 +6,10 @@ interface FindingsTableProps {
   findings: Finding[]
   tenantId: string
   loading: boolean
+  severityFilter: string[]
+  resourceTypeFilter: string
+  onSeverityFilterChange: (severities: string[]) => void
+  onResourceTypeFilterChange: (type: string) => void
 }
 
 // Utility function to extract AWS resource type from ARN
@@ -51,14 +55,18 @@ function applyFilters(
   })
 }
 
-export default function FindingsTable({ findings: initialFindings, tenantId, loading }: FindingsTableProps) {
+export default function FindingsTable({
+  findings: initialFindings,
+  tenantId,
+  loading,
+  severityFilter,
+  resourceTypeFilter,
+  onSeverityFilterChange,
+  onResourceTypeFilterChange,
+}: FindingsTableProps) {
   const [allFindings, setAllFindings] = useState<Finding[]>(initialFindings)
   const [loadingMore, setLoadingMore] = useState(false)
   const [cursor, setCursor] = useState<string | undefined>()
-  
-  // Filter state management
-  const [severityFilter, setSeverityFilter] = useState<string[]>([])
-  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('')
 
   useEffect(() => {
     setAllFindings(initialFindings)
@@ -66,18 +74,18 @@ export default function FindingsTable({ findings: initialFindings, tenantId, loa
 
   // Handler for severity filter changes
   const handleSeverityChange = (severities: string[]) => {
-    setSeverityFilter(severities)
+    onSeverityFilterChange(severities)
   }
 
   // Handler for resource type filter changes
   const handleResourceTypeChange = (type: string) => {
-    setResourceTypeFilter(type)
+    onResourceTypeFilterChange(type)
   }
 
   // Clear all filters
   const clearFilters = () => {
-    setSeverityFilter([])
-    setResourceTypeFilter('')
+    onSeverityFilterChange([])
+    onResourceTypeFilterChange('')
   }
 
   const loadMore = async () => {

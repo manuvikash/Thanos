@@ -1,7 +1,7 @@
 # IAM role for scan handler Lambda
 resource "aws_iam_role" "scan_handler" {
   name = "${local.name_prefix}-scan-handler"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -14,14 +14,14 @@ resource "aws_iam_role" "scan_handler" {
       }
     ]
   })
-  
+
   tags = local.common_tags
 }
 
 resource "aws_iam_role_policy" "scan_handler" {
   name = "scan-handler-policy"
   role = aws_iam_role.scan_handler.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -75,13 +75,13 @@ resource "aws_iam_role_policy" "scan_handler" {
 resource "aws_lambda_function" "scan_handler" {
   filename         = "${path.module}/../dist/scan_handler.zip"
   function_name    = "${local.name_prefix}-scan-handler"
-  role            = aws_iam_role.scan_handler.arn
-  handler         = "app.lambda_handler"
+  role             = aws_iam_role.scan_handler.arn
+  handler          = "app.lambda_handler"
   source_code_hash = fileexists("${path.module}/../dist/scan_handler.zip") ? filebase64sha256("${path.module}/../dist/scan_handler.zip") : ""
-  runtime         = "python3.11"
-  timeout         = 300
-  memory_size     = 512
-  
+  runtime          = "python3.11"
+  timeout          = 300
+  memory_size      = 512
+
   environment {
     variables = {
       SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
@@ -90,21 +90,21 @@ resource "aws_lambda_function" "scan_handler" {
       ALERTS_TOPIC_ARN = aws_sns_topic.critical_findings_alerts.arn
     }
   }
-  
+
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "scan_handler" {
   name              = "/aws/lambda/${aws_lambda_function.scan_handler.function_name}"
   retention_in_days = 7
-  
+
   tags = local.common_tags
 }
 
 # IAM role for findings handler Lambda
 resource "aws_iam_role" "findings_handler" {
   name = "${local.name_prefix}-findings-handler"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -117,14 +117,14 @@ resource "aws_iam_role" "findings_handler" {
       }
     ]
   })
-  
+
   tags = local.common_tags
 }
 
 resource "aws_iam_role_policy" "findings_handler" {
   name = "findings-handler-policy"
   role = aws_iam_role.findings_handler.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -156,33 +156,33 @@ resource "aws_iam_role_policy" "findings_handler" {
 resource "aws_lambda_function" "findings_handler" {
   filename         = "${path.module}/../dist/findings_handler.zip"
   function_name    = "${local.name_prefix}-findings-handler"
-  role            = aws_iam_role.findings_handler.arn
-  handler         = "app.lambda_handler"
+  role             = aws_iam_role.findings_handler.arn
+  handler          = "app.lambda_handler"
   source_code_hash = fileexists("${path.module}/../dist/findings_handler.zip") ? filebase64sha256("${path.module}/../dist/findings_handler.zip") : ""
-  runtime         = "python3.11"
-  timeout         = 30
-  memory_size     = 256
-  
+  runtime          = "python3.11"
+  timeout          = 30
+  memory_size      = 256
+
   environment {
     variables = {
       FINDINGS_TABLE = aws_dynamodb_table.findings.name
     }
   }
-  
+
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "findings_handler" {
   name              = "/aws/lambda/${aws_lambda_function.findings_handler.function_name}"
   retention_in_days = 7
-  
+
   tags = local.common_tags
 }
 
 # IAM role for resources handler Lambda
 resource "aws_iam_role" "resources_handler" {
   name = "${local.name_prefix}-resources-handler"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -195,14 +195,14 @@ resource "aws_iam_role" "resources_handler" {
       }
     ]
   })
-  
+
   tags = local.common_tags
 }
 
 resource "aws_iam_role_policy" "resources_handler" {
   name = "resources-handler-policy"
   role = aws_iam_role.resources_handler.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -230,25 +230,103 @@ resource "aws_iam_role_policy" "resources_handler" {
 resource "aws_lambda_function" "resources_handler" {
   filename         = "${path.module}/../dist/resources_handler.zip"
   function_name    = "${local.name_prefix}-resources-handler"
-  role            = aws_iam_role.resources_handler.arn
-  handler         = "app.lambda_handler"
+  role             = aws_iam_role.resources_handler.arn
+  handler          = "app.lambda_handler"
   source_code_hash = fileexists("${path.module}/../dist/resources_handler.zip") ? filebase64sha256("${path.module}/../dist/resources_handler.zip") : ""
-  runtime         = "python3.11"
-  timeout         = 30
-  memory_size     = 256
-  
+  runtime          = "python3.11"
+  timeout          = 30
+  memory_size      = 256
+
   environment {
     variables = {
       SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
     }
   }
-  
+
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "resources_handler" {
   name              = "/aws/lambda/${aws_lambda_function.resources_handler.function_name}"
   retention_in_days = 7
-  
+
+  tags = local.common_tags
+}
+
+# IAM role for metrics handler Lambda
+resource "aws_iam_role" "metrics_handler" {
+  name = "${local.name_prefix}-metrics-handler"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy" "metrics_handler" {
+  name = "metrics-handler-policy"
+  role = aws_iam_role.metrics_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Query",
+          "dynamodb:GetItem"
+        ]
+        Resource = [
+          aws_dynamodb_table.findings.arn,
+          "${aws_dynamodb_table.findings.arn}/index/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Metrics handler Lambda function
+resource "aws_lambda_function" "metrics_handler" {
+  filename         = "${path.module}/../dist/metrics_handler.zip"
+  function_name    = "${local.name_prefix}-metrics-handler"
+  role             = aws_iam_role.metrics_handler.arn
+  handler          = "app.lambda_handler"
+  source_code_hash = fileexists("${path.module}/../dist/metrics_handler.zip") ? filebase64sha256("${path.module}/../dist/metrics_handler.zip") : ""
+  runtime          = "python3.11"
+  timeout          = 60
+  memory_size      = 512
+
+  environment {
+    variables = {
+      FINDINGS_TABLE = aws_dynamodb_table.findings.name
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "metrics_handler" {
+  name              = "/aws/lambda/${aws_lambda_function.metrics_handler.function_name}"
+  retention_in_days = 7
+
   tags = local.common_tags
 }

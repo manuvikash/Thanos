@@ -73,6 +73,47 @@ export interface ResourcesResponse {
   };
 }
 
+export interface SeverityCounts {
+  CRITICAL: number;
+  HIGH: number;
+  MEDIUM: number;
+  LOW: number;
+}
+
+export interface CurrentScan {
+  snapshot_key: string;
+  timestamp: string;
+  total_findings: number;
+  severity_counts: SeverityCounts;
+}
+
+export interface PreviousScan {
+  snapshot_key: string;
+  timestamp: string;
+  total_findings: number;
+}
+
+export interface TopRule {
+  rule_id: string;
+  count: number;
+  severity: string;
+}
+
+export interface TimelinePoint {
+  snapshot_key: string;
+  timestamp: string;
+  severity_counts: SeverityCounts;
+  total: number;
+}
+
+export interface DashboardMetrics {
+  tenant_id: string;
+  current_scan: CurrentScan;
+  previous_scan: PreviousScan | null;
+  top_rules: TopRule[];
+  timeline: TimelinePoint[];
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
   const headers = {
     'Content-Type': 'application/json',
@@ -137,4 +178,16 @@ export async function getResources(
   });
 
   return fetchAPI(`/resources?${params.toString()}`);
+}
+
+export async function getDashboardMetrics(
+  tenantId: string,
+  timelineLimit: number = 5
+): Promise<DashboardMetrics> {
+  const params = new URLSearchParams({
+    tenant_id: tenantId,
+    limit: timelineLimit.toString(),
+  });
+
+  return fetchAPI(`/findings/metrics?${params.toString()}`);
 }
