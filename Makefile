@@ -173,7 +173,7 @@ clean:
 
 cleanup-all:
 	@echo "Running complete cleanup (destroys all AWS resources)..."
-	@bash scripts/cleanup-all.sh
+	@bash cleanup-scripts/cleanup-all.sh
 
 estimate-costs:
 	@echo "Estimating AWS costs..."
