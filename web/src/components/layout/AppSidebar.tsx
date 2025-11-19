@@ -1,6 +1,7 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight, FileCode } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, FileCode, LogOut, Home } from 'lucide-react'
+import { signOut } from 'aws-amplify/auth'
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +13,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarFooter,
 } from '@/components/ui/sidebar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ROUTES, isDashboardRoute } from '@/routes'
@@ -24,6 +26,11 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
+  {
+    title: 'Home',
+    url: ROUTES.ROOT,
+    icon: Home,
+  },
   {
     title: 'Dashboard',
     url: '/dashboard',
@@ -62,7 +69,7 @@ const navigationItems: NavigationItem[] = [
 export const AppSidebar: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  
+
   // Manage expanded state for collapsible items
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('sidebar-expanded-items')
@@ -135,9 +142,8 @@ export const AppSidebar: React.FC = () => {
                             {Icon && <Icon className="h-4 w-4" />}
                             <span>{item.title}</span>
                             <ChevronRight
-                              className={`ml-auto h-4 w-4 transition-transform duration-200 ${
-                                isExpanded ? 'rotate-90' : ''
-                              }`}
+                              className={`ml-auto h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''
+                                }`}
                             />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
@@ -194,6 +200,26 @@ export const AppSidebar: React.FC = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={async () => {
+                try {
+                  await signOut()
+                  navigate(ROUTES.ROOT)
+                } catch (error) {
+                  console.error('Error signing out: ', error)
+                }
+              }}
+              tooltip="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }

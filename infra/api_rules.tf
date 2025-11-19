@@ -14,8 +14,8 @@ resource "aws_apigatewayv2_route" "rules_list" {
   route_key = "GET /rules"
   target    = "integrations/${aws_apigatewayv2_integration.rules.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 # GET /rules/{rule_id} - get specific rule
@@ -24,8 +24,8 @@ resource "aws_apigatewayv2_route" "rules_get" {
   route_key = "GET /rules/{rule_id}"
   target    = "integrations/${aws_apigatewayv2_integration.rules.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 # POST /rules - create new rule
@@ -34,8 +34,8 @@ resource "aws_apigatewayv2_route" "rules_create" {
   route_key = "POST /rules"
   target    = "integrations/${aws_apigatewayv2_integration.rules.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 # PUT /rules/{rule_id} - update rule
@@ -44,8 +44,8 @@ resource "aws_apigatewayv2_route" "rules_update" {
   route_key = "PUT /rules/{rule_id}"
   target    = "integrations/${aws_apigatewayv2_integration.rules.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 # DELETE /rules/{rule_id} - delete rule
@@ -54,8 +54,8 @@ resource "aws_apigatewayv2_route" "rules_delete" {
   route_key = "DELETE /rules/{rule_id}"
   target    = "integrations/${aws_apigatewayv2_integration.rules.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 # Lambda permission for API Gateway to invoke rules handler

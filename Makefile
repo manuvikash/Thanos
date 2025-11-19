@@ -32,16 +32,16 @@ help:
 
 fmt:
 	@echo "Formatting Python code..."
-	cd lambdas && python -m black . || echo "black not installed, skipping"
-	cd lambdas && python -m ruff check --fix . || echo "ruff not installed, skipping"
+	cd lambdas && python3 -m black . || echo "black not installed, skipping"
+	cd lambdas && python3 -m ruff check --fix . || echo "ruff not installed, skipping"
 	@echo "Formatting TypeScript code..."
 	cd web && npm run format || echo "npm dependencies not installed"
 
 test:
 	@echo "Running Python tests..."
-	cd lambdas/scan_handler && python -m pytest tests/ -v || echo "pytest not installed or tests failed"
-	cd lambdas/findings_handler && python -m pytest tests/ -v || echo "pytest not installed or tests failed"
-	cd lambdas/metrics_handler && python -m pytest test_metrics.py -v || echo "pytest not installed or tests failed"
+	cd lambdas/scan_handler && python3 -m pytest tests/ -v || echo "pytest not installed or tests failed"
+	cd lambdas/findings_handler && python3 -m pytest tests/ -v || echo "pytest not installed or tests failed"
+	cd lambdas/metrics_handler && python3 -m pytest test_metrics.py -v || echo "pytest not installed or tests failed"
 	@echo "Running TypeScript tests..."
 	cd web && npm test || echo "npm dependencies not installed"
 
@@ -55,7 +55,7 @@ package-lambdas:
 	@cp -r lambdas/common dist/scan_handler_build/
 	@cp -r lambdas/scan_handler/*.py dist/scan_handler_build/
 	@cp -r rules dist/scan_handler_build/
-	@pip install -r lambdas/scan_handler/requirements.txt -t dist/scan_handler_build/ --quiet
+	@pip3 install -r lambdas/scan_handler/requirements.txt -t dist/scan_handler_build/ --quiet
 	@cd dist/scan_handler_build && zip -r ../scan_handler.zip . -q
 	@rm -rf dist/scan_handler_build
 	
@@ -63,7 +63,7 @@ package-lambdas:
 	@mkdir -p dist/findings_handler_build
 	@cp -r lambdas/common dist/findings_handler_build/
 	@cp -r lambdas/findings_handler/*.py dist/findings_handler_build/
-	@pip install -r lambdas/findings_handler/requirements.txt -t dist/findings_handler_build/ --quiet
+	@pip3 install -r lambdas/findings_handler/requirements.txt -t dist/findings_handler_build/ --quiet
 	@cd dist/findings_handler_build && zip -r ../findings_handler.zip . -q
 	@rm -rf dist/findings_handler_build
 	
@@ -130,6 +130,7 @@ tf-plan: package-lambdas
 tf-apply: package-lambdas
 	@echo "Applying Terraform changes..."
 	cd infra && terraform apply
+	@$(MAKE) update-web-env
 
 tf-destroy:
 	@echo "Destroying Terraform resources..."
@@ -148,7 +149,8 @@ tf-destroy:
 
 web-dev:
 	@echo "Starting Vite dev server..."
-	@echo "Make sure to set VITE_API_URL and VITE_API_KEY in web/.env"
+	@echo "Make sure to set VITE_API_URL, VITE_COGNITO_USER_POOL_ID, and VITE_COGNITO_CLIENT_ID in web/.env"
+	@echo "You can run 'make update-web-env' to generate it automatically"
 	cd web && npm run dev
 
 web-build:
@@ -203,3 +205,10 @@ cleanup-all:
 estimate-costs:
 	@echo "Estimating AWS costs..."
 	@bash scripts/estimate-costs.sh
+
+update-web-env:
+	@echo "Updating web/.env with Terraform outputs..."
+	@echo "VITE_API_URL=$$(cd infra && terraform output -raw api_url)" > web/.env
+	@echo "VITE_COGNITO_USER_POOL_ID=$$(cd infra && terraform output -raw cognito_user_pool_id)" >> web/.env
+	@echo "VITE_COGNITO_CLIENT_ID=$$(cd infra && terraform output -raw cognito_client_id)" >> web/.env
+	@echo "Web environment updated."

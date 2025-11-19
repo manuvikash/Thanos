@@ -37,8 +37,8 @@ resource "aws_apigatewayv2_route" "scan" {
   route_key = "POST /scan"
   target    = "integrations/${aws_apigatewayv2_integration.scan.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_lambda_permission" "scan" {
@@ -64,8 +64,8 @@ resource "aws_apigatewayv2_route" "findings" {
   route_key = "GET /findings"
   target    = "integrations/${aws_apigatewayv2_integration.findings.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_lambda_permission" "findings" {
@@ -132,15 +132,27 @@ resource "aws_cloudwatch_log_group" "authorizer" {
   tags = local.common_tags
 }
 
-resource "aws_apigatewayv2_authorizer" "api_key" {
-  api_id                            = aws_apigatewayv2_api.main.id
-  authorizer_type                   = "REQUEST"
-  authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
-  identity_sources                  = ["$request.header.x-api-key"]
-  name                              = "api-key-authorizer"
-  authorizer_payload_format_version = "2.0"
-  enable_simple_responses           = true
+resource "aws_apigatewayv2_authorizer" "cognito" {
+  api_id           = aws_apigatewayv2_api.main.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-authorizer"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.client.id]
+    issuer   = "https://${aws_cognito_user_pool.main.endpoint}"
+  }
 }
+
+# resource "aws_apigatewayv2_authorizer" "api_key" {
+#   api_id                            = aws_apigatewayv2_api.main.id
+#   authorizer_type                   = "REQUEST"
+#   authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
+#   identity_sources                  = ["$request.header.x-api-key"]
+#   name                              = "api-key-authorizer"
+#   authorizer_payload_format_version = "2.0"
+#   enable_simple_responses           = true
+# }
 
 resource "aws_lambda_permission" "authorizer" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -165,8 +177,8 @@ resource "aws_apigatewayv2_route" "resources" {
   route_key = "GET /resources"
   target    = "integrations/${aws_apigatewayv2_integration.resources.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_lambda_permission" "resources" {
@@ -192,8 +204,8 @@ resource "aws_apigatewayv2_route" "metrics" {
   route_key = "GET /findings/metrics"
   target    = "integrations/${aws_apigatewayv2_integration.metrics.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_lambda_permission" "metrics" {

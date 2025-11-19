@@ -39,8 +39,8 @@ resource "aws_apigatewayv2_route" "get_customers" {
   route_key = "GET /customers"
   target    = "integrations/${aws_apigatewayv2_integration.customers.id}"
 
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.api_key.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_lambda_permission" "customers_api" {

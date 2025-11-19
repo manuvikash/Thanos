@@ -2,8 +2,10 @@
  * API client for Thanos backend
  */
 
+import { fetchAuthSession } from 'aws-amplify/auth';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_KEY = import.meta.env.VITE_API_KEY || '';
+// const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 export interface ScanRequest {
   tenant_id: string;
@@ -192,10 +194,18 @@ export interface DashboardMetrics {
 }
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const headers = {
+  let token = '';
+  try {
+    const session = await fetchAuthSession();
+    token = session.tokens?.idToken?.toString() || '';
+  } catch (e) {
+    // console.warn('No auth session found', e);
+  }
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'x-api-key': API_KEY,
-    ...options.headers,
+    ...(token ? { 'Authorization': token } : {}),
+    ...options.headers as Record<string, string>,
   };
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -252,7 +262,6 @@ export async function registerCustomer(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
     },
     body: JSON.stringify(registration),
   });
@@ -300,7 +309,7 @@ export async function getRules(tenantId?: string): Promise<RulesResponse> {
   if (tenantId) {
     params.append('tenant_id', tenantId);
   }
-  
+
   const url = params.toString() ? `/rules?${params.toString()}` : '/rules';
   return fetchAPI(url);
 }
@@ -310,7 +319,7 @@ export async function getRule(ruleId: string, tenantId?: string): Promise<Rule> 
   if (tenantId) {
     params.append('tenant_id', tenantId);
   }
-  
+
   const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
   return fetchAPI(url);
 }
@@ -323,7 +332,7 @@ export async function createRule(
   if (tenantId) {
     params.append('tenant_id', tenantId);
   }
-  
+
   const url = params.toString() ? `/rules?${params.toString()}` : '/rules';
   return fetchAPI(url, {
     method: 'POST',
@@ -340,7 +349,7 @@ export async function updateRule(
   if (tenantId) {
     params.append('tenant_id', tenantId);
   }
-  
+
   const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
   return fetchAPI(url, {
     method: 'PUT',
@@ -353,7 +362,7 @@ export async function deleteRule(ruleId: string, tenantId?: string): Promise<{ m
   if (tenantId) {
     params.append('tenant_id', tenantId);
   }
-  
+
   const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
   return fetchAPI(url, {
     method: 'DELETE',

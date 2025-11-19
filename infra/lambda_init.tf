@@ -91,7 +91,7 @@ resource "null_resource" "init_rules" {
     command = <<EOF
       aws lambda invoke \
         --function-name ${aws_lambda_function.init_handler.function_name} \
-        --region us-east-1 \
+        --region ${var.aws_region} \
         /tmp/init-response.json && \
       cat /tmp/init-response.json && \
       rm /tmp/init-response.json

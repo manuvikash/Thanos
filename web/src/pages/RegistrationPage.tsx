@@ -90,61 +90,61 @@ export default function RegistrationPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0C1A1A]">
+    <div className="relative min-h-screen bg-background">
       {/* Background decorative elements */}
       <SphereBackground />
       <GeometricFooter />
-      
+
       {/* Main content with higher z-index */}
       <div className="relative z-10">
         <RegistrationHeader />
-        
+
         <main className="px-6 md:px-12 lg:px-24 pb-24">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24 pt-12">
               <div className="space-y-8">
-                <div className="inline-block px-4 py-1 rounded-full bg-neutral-800/50 border border-neutral-700 text-neutral-300 text-sm font-mono-custom">
+                <div className="inline-block px-4 py-1 rounded-full bg-muted border border-border text-muted-foreground text-sm font-mono-custom">
                   v1.0.0 Public Beta
                 </div>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-100 tracking-tighter leading-tight">
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tighter leading-tight">
                   Secure Your <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-500">
                     Cloud Infrastructure
                   </span>
                 </h1>
-                <p className="text-xl text-neutral-400 max-w-lg leading-relaxed">
+                <p className="text-xl text-muted-foreground max-w-lg leading-relaxed">
                   Automated security scanning, compliance monitoring, and cost optimization for your AWS environment.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-4">
-                  <button 
+                  <button
                     onClick={scrollToForm}
-                    className="bg-neutral-100 hover:bg-neutral-200 text-[#0C1A1A] font-semibold py-3 px-8 rounded-md transition duration-200 font-mono-custom"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-8 rounded-md transition duration-200 font-mono-custom"
                   >
                     Get Started
                   </button>
-                  <a 
-                    href="https://github.com/manuvikash/thanos" 
-                    target="_blank" 
+                  <a
+                    href="https://github.com/manuvikash/thanos"
+                    target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-transparent border border-neutral-700 hover:border-neutral-500 text-neutral-300 py-3 px-8 rounded-md transition duration-200 font-mono-custom"
+                    className="bg-transparent border border-border hover:border-muted-foreground text-muted-foreground py-3 px-8 rounded-md transition duration-200 font-mono-custom"
                   >
                     View Documentation
                   </a>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-6">
-                <FeatureCard 
+                <FeatureCard
                   icon={<CloudIcon />}
                   title="Multi-Region Scanning"
                   description="Automatically discover and scan resources across all enabled AWS regions."
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<ShieldIcon />}
                   title="Security & Compliance"
                   description="Detect misconfigurations and security risks against industry best practices."
                 />
-                <FeatureCard 
+                <FeatureCard
                   icon={<CostIcon />}
                   title="Resource Inventory"
                   description="Maintain a comprehensive inventory of your cloud assets and configurations."
@@ -176,15 +176,15 @@ export default function RegistrationPage() {
           </div>
         </main>
 
-        <footer className="border-t border-neutral-800 bg-[#0C1A1A] py-12 px-6">
+        <footer className="border-t border-border bg-background py-12 px-6">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="text-neutral-500 text-sm">
+            <div className="text-muted-foreground text-sm">
               © {new Date().getFullYear()} Cloud Golden Guard. All rights reserved.
             </div>
             <div className="flex gap-8">
-              <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors">Terms of Service</a>
-              <a href="#" className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors">Contact</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">Privacy Policy</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">Terms of Service</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm transition-colors">Contact</a>
             </div>
           </div>
         </footer>

@@ -15,7 +15,13 @@ import { ROUTES } from './routes'
 import { SidebarInset } from './components/ui/sidebar'
 import RegistrationPage from './pages/RegistrationPage'
 import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/Login'
 import { RulesPage } from './pages/RulesPage'
+import { configureAuth } from './utils/auth'
+import { RequireAuth } from './components/auth/RequireAuth'
+
+// Initialize Amplify Auth
+configureAuth();
 
 function App() {
   const { showToast } = useToast()
@@ -67,29 +73,37 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          {/* Landing Page - Standalone Layout */}
+          {/* Public Routes */}
           <Route path={ROUTES.ROOT} element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
 
           {/* Registration Route - Standalone Layout */}
+          {/* TODO: Disable or protect registration if needed, but keeping as is for now or protecting? 
+              User said "no create account feature", but that might mean "no self-signup for admin". 
+              The registration page seems to be for "Customer Onboarding" (creating tenants), which an admin might do.
+              I'll protect it.
+          */}
           <Route path={ROUTES.REGISTER} element={<RegistrationPage />} />
 
-          {/* Dashboard Routes - App Layout */}
+          {/* Dashboard Routes - App Layout - Protected */}
           <Route
             element={
-              <AppLayout>
-                <AppSidebar />
+              <RequireAuth>
+                <AppLayout>
+                  <AppSidebar />
 
-                <SidebarInset className="relative">
-                  {/* Background decorative sphere - theme-aware */}
-                  <BackgroundSphere />
+                  <SidebarInset className="relative">
+                    {/* Background decorative sphere - theme-aware */}
+                    <BackgroundSphere />
 
-                  <Header />
+                    <Header />
 
-                  <main className="relative z-10">
-                    <Outlet />
-                  </main>
-                </SidebarInset>
-              </AppLayout>
+                    <main className="relative z-10">
+                      <Outlet />
+                    </main>
+                  </SidebarInset>
+                </AppLayout>
+              </RequireAuth>
             }
           >
             {/* Dashboard section routes */}
