@@ -25,6 +25,7 @@ export interface Finding {
   timestamp: string;
   account_id: string;
   region: string;
+  category?: string; // compliance, type-golden, instance-golden
 }
 
 export interface ScanResponse {

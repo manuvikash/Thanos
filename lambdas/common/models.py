@@ -25,6 +25,7 @@ class Rule:
     check: RuleCheck
     severity: str  # CRITICAL, HIGH, MEDIUM, LOW
     message: str
+    category: str = "compliance"  # compliance, type-golden, instance-golden
     selector: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -44,6 +45,7 @@ class Rule:
             check=check,
             severity=data["severity"],
             message=data["message"],
+            category=data.get("category", "compliance"),
             selector=data.get("selector", {}),
         )
 
@@ -76,6 +78,7 @@ class Finding:
     timestamp: str
     account_id: str
     region: str
+    category: str = "compliance"
     snapshot_key: str = ""
 
     @classmethod
@@ -101,6 +104,7 @@ class Finding:
             timestamp=datetime.utcnow().isoformat() + "Z",
             account_id=resource.account_id,
             region=resource.region,
+            category=rule.category,
             snapshot_key=snapshot_key,
         )
 

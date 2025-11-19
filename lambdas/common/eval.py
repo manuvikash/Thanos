@@ -9,6 +9,53 @@ from .logging import get_logger
 logger = get_logger(__name__)
 
 
+def matches_selector(resource: Resource, selector: Dict[str, Any]) -> bool:
+    """
+    Check if a resource matches the given selector criteria.
+    
+    Supported selector types:
+    - tags: Match resources with specific tags (e.g., {"tags": {"Environment": "production"}})
+    - arn_pattern: Match resources whose ARN matches a regex (e.g., {"arn_pattern": ".*:bucket/prod-.*"})
+    - name_pattern: Match resources whose name/ID matches a regex (e.g., {"name_pattern": "prod-.*"})
+    
+    Args:
+        resource: The resource to check
+        selector: Selector criteria from the rule
+        
+    Returns:
+        True if resource matches selector, False otherwise (empty selector matches all)
+    """
+    if not selector:
+        return True
+    
+    # Check tags
+    if "tags" in selector:
+        resource_tags = resource.metadata.get("Tags", {})
+        # Convert list of {Key: x, Value: y} to dict if needed
+        if isinstance(resource_tags, list):
+            resource_tags = {tag.get("Key"): tag.get("Value") for tag in resource_tags}
+        
+        for key, value in selector["tags"].items():
+            if resource_tags.get(key) != value:
+                return False
+    
+    # Check ARN pattern
+    if "arn_pattern" in selector:
+        pattern = selector["arn_pattern"]
+        if not re.match(pattern, resource.arn):
+            return False
+    
+    # Check name pattern (extract from ARN or metadata)
+    if "name_pattern" in selector:
+        pattern = selector["name_pattern"]
+        # Try to extract name from ARN (last part after /)
+        name = resource.arn.split("/")[-1] if "/" in resource.arn else resource.arn.split(":")[-1]
+        if not re.match(pattern, name):
+            return False
+    
+    return True
+
+
 def get_nested(obj: Any, path: str) -> Any:
     """
     Get a nested value from an object using dot notation and list wildcards.
@@ -194,6 +241,35 @@ def evaluate_forbidden_cidr_port(resource: Resource, rule: Rule) -> Optional[Fin
     return None
 
 
+def evaluate_golden_config(resource: Resource, rule: Rule) -> Optional[Finding]:
+    """
+    Evaluate a 'golden-config' check.
+    Compares a subset of the resource configuration against a golden record.
+    
+    Args:
+        resource: The resource to check
+        rule: The rule to evaluate
+        
+    Returns:
+        Finding if the check fails, None otherwise
+    """
+    observed = get_nested(resource.config, rule.check.path) if rule.check.path else resource.config
+    expected = rule.check.expected
+    
+    # Simple equality check for now. 
+    # In the future, this could support partial matching or ignoring specific fields.
+    if observed != expected:
+        return Finding.create(
+            tenant_id="",
+            rule=rule,
+            resource=resource,
+            observed=observed,
+            expected=expected,
+        )
+    
+    return None
+
+
 def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str, snapshot_key: str = "") -> Optional[Finding]:
     """
     Evaluate a single rule against a resource.
@@ -211,6 +287,10 @@ def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str, snapshot_key: 
     if resource.resource_type != rule.resource_type:
         return None
     
+    # Check if rule selector matches the resource
+    if not matches_selector(resource, rule.selector):
+        return None
+    
     # Evaluate based on check type
     check_type = rule.check.type
     finding = None
@@ -221,6 +301,8 @@ def evaluate_rule(resource: Resource, rule: Rule, tenant_id: str, snapshot_key: 
         finding = evaluate_forbidden_any(resource, rule)
     elif check_type == "forbidden-cidr-port":
         finding = evaluate_forbidden_cidr_port(resource, rule)
+    elif check_type == "golden-config":
+        finding = evaluate_golden_config(resource, rule)
     else:
         logger.warning(f"Unknown check type: {check_type}")
         return None

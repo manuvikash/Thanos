@@ -1,7 +1,7 @@
 """
 Resource normalization for S3, IAM, and Security Groups.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from botocore.exceptions import ClientError
 from .models import Resource
 from .logging import get_logger
@@ -173,7 +173,7 @@ def normalize_security_groups(ec2_client: Any, account_id: str, region: str) -> 
 
 
 def collect_resources(
-    credentials: Dict[str, str],
+    credentials: Optional[Dict[str, str]],
     account_id: str,
     regions: List[str],
 ) -> List[Resource]:
@@ -181,7 +181,7 @@ def collect_resources(
     Collect all resources from the specified regions.
     
     Args:
-        credentials: AWS credentials from assume_role
+        credentials: AWS credentials from assume_role, or None for same-account scanning
         account_id: AWS account ID
         regions: List of regions to scan
         
@@ -197,36 +197,45 @@ def collect_resources(
         
         # S3 (global service, only collect once)
         if region == regions[0]:
-            s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=credentials["aws_access_key_id"],
-                aws_secret_access_key=credentials["aws_secret_access_key"],
-                aws_session_token=credentials["aws_session_token"],
-            )
+            if credentials is None:
+                s3_client = boto3.client("s3")
+            else:
+                s3_client = boto3.client(
+                    "s3",
+                    aws_access_key_id=credentials["aws_access_key_id"],
+                    aws_secret_access_key=credentials["aws_secret_access_key"],
+                    aws_session_token=credentials["aws_session_token"],
+                )
             s3_resources = normalize_s3_buckets(s3_client, account_id, region)
             all_resources.extend(s3_resources)
             logger.info(f"Collected {len(s3_resources)} S3 buckets")
         
         # IAM (global service, only collect once)
         if region == regions[0]:
-            iam_client = boto3.client(
-                "iam",
-                aws_access_key_id=credentials["aws_access_key_id"],
-                aws_secret_access_key=credentials["aws_secret_access_key"],
-                aws_session_token=credentials["aws_session_token"],
-            )
+            if credentials is None:
+                iam_client = boto3.client("iam")
+            else:
+                iam_client = boto3.client(
+                    "iam",
+                    aws_access_key_id=credentials["aws_access_key_id"],
+                    aws_secret_access_key=credentials["aws_secret_access_key"],
+                    aws_session_token=credentials["aws_session_token"],
+                )
             iam_resources = normalize_iam_policies(iam_client, account_id, region)
             all_resources.extend(iam_resources)
             logger.info(f"Collected {len(iam_resources)} IAM policies")
         
         # EC2 Security Groups (regional)
-        ec2_client = boto3.client(
-            "ec2",
-            region_name=region,
-            aws_access_key_id=credentials["aws_access_key_id"],
-            aws_secret_access_key=credentials["aws_secret_access_key"],
-            aws_session_token=credentials["aws_session_token"],
-        )
+        if credentials is None:
+            ec2_client = boto3.client("ec2", region_name=region)
+        else:
+            ec2_client = boto3.client(
+                "ec2",
+                region_name=region,
+                aws_access_key_id=credentials["aws_access_key_id"],
+                aws_secret_access_key=credentials["aws_secret_access_key"],
+                aws_session_token=credentials["aws_session_token"],
+            )
         sg_resources = normalize_security_groups(ec2_client, account_id, region)
         all_resources.extend(sg_resources)
         logger.info(f"Collected {len(sg_resources)} security groups from {region}")
