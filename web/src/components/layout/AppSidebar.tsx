@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, FileCode } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +51,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Findings Table',
     url: ROUTES.FINDINGS,
     icon: Table,
+  },
+  {
+    title: 'Rules',
+    url: ROUTES.RULES,
+    icon: FileCode,
   },
 ]
 

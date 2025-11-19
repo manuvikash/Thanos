@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from common.aws import assume_role, get_enabled_regions
 from common.normalize import collect_resources
-from common.s3io import write_snapshot, load_rules
+from common.s3io import write_snapshot, load_rules, load_rules_from_dynamodb
 from common.eval import evaluate_resources
 from common.ddb import put_findings
 from common.logging import get_logger, log_context
@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 # Environment variables
 SNAPSHOTS_BUCKET = os.environ.get("SNAPSHOTS_BUCKET", "")
 RULES_BUCKET = os.environ.get("RULES_BUCKET", "")
+RULES_TABLE = os.environ.get("RULES_TABLE", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
 SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
 sns_client = boto3.client("sns")
@@ -136,9 +137,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count=len(resources),
         )
         
-        # Step 3: Load rules
-        logger.info(f"Loading rules from {rules_source}")
-        rules = load_rules(rules_source, tenant_id, RULES_BUCKET if rules_source == "s3" else None)
+        # Step 3: Load rules from DynamoDB
+        logger.info("Loading rules from DynamoDB")
+        if rules_source == "s3":
+            # Legacy S3-based rules (kept for backward compatibility)
+            rules = load_rules(rules_source, tenant_id, RULES_BUCKET)
+        else:
+            # Load all rules from DynamoDB (default + custom)
+            if not RULES_TABLE:
+                raise ValueError("RULES_TABLE environment variable not set")
+            rules = load_rules_from_dynamodb(tenant_id, RULES_TABLE)
+        
         log_context(
             logger,
             "info",

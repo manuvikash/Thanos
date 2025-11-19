@@ -10,6 +10,7 @@ export const ROUTES = {
     FINDINGS_TIMELINE: '/dashboard/findings-timeline',
   },
   FINDINGS: '/findings',
+  RULES: '/rules',
   REGISTER: '/register',
 } as const
 

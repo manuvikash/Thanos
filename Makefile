@@ -100,6 +100,23 @@ package-lambdas:
 	@cd dist/metrics_handler_build && zip -r ../metrics_handler.zip . -q
 	@rm -rf dist/metrics_handler_build
 	
+	@echo "Packaging rules_handler..."
+	@mkdir -p dist/rules_handler_build
+	@cp -r lambdas/common dist/rules_handler_build/
+	@cp -r lambdas/rules_handler/*.py dist/rules_handler_build/
+	@cp -r rules dist/rules_handler_build/
+	@cd dist/rules_handler_build && zip -r ../rules_handler.zip . -q
+	@rm -rf dist/rules_handler_build
+	
+	@echo "Packaging init_handler..."
+	@mkdir -p dist/init_handler_build
+	@pip3 install --target dist/init_handler_build pyyaml -q
+	@cp -r lambdas/common dist/init_handler_build/
+	@cp -r lambdas/init_handler/*.py dist/init_handler_build/
+	@cp -r rules dist/init_handler_build/
+	@cd dist/init_handler_build && zip -r ../init_handler.zip . -q
+	@rm -rf dist/init_handler_build
+	
 	@echo "Lambda packages created in dist/"
 
 tf-init:

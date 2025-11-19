@@ -45,6 +45,69 @@ export interface FindingsResponse {
   next_cursor?: string;
 }
 
+export interface Rule {
+  id: string;
+  resource_type: string;
+  check: {
+    type: string;
+    path: string;
+    expected?: any;
+    forbidden?: string[];
+    params?: Record<string, any>;
+  };
+  severity: string;
+  message: string;
+  category: string;
+  selector: Record<string, any>;
+  source: 'default' | 'custom' | 'global';
+  tenant_id?: string;
+  created_at?: string;
+  created_by?: string;
+  updated_at?: string;
+  updated_by?: string;
+  enabled?: boolean;
+  editable?: boolean;
+}
+
+export interface RulesResponse {
+  rules: Rule[];
+}
+
+export interface RuleCreateRequest {
+  id?: string;
+  resource_type: string;
+  check: {
+    type: string;
+    path: string;
+    expected?: any;
+    forbidden?: string[];
+    params?: Record<string, any>;
+  };
+  severity: string;
+  message: string;
+  category?: string;
+  selector?: Record<string, any>;
+  created_by?: string;
+  enabled?: boolean;
+}
+
+export interface RuleUpdateRequest {
+  resource_type?: string;
+  check?: {
+    type: string;
+    path: string;
+    expected?: any;
+    forbidden?: string[];
+    params?: Record<string, any>;
+  };
+  severity?: string;
+  message?: string;
+  category?: string;
+  selector?: Record<string, any>;
+  updated_by?: string;
+  enabled?: boolean;
+}
+
 export interface Customer {
   tenant_id: string;
   customer_name: string;
@@ -229,4 +292,70 @@ export async function getDashboardMetrics(
   });
 
   return fetchAPI(`/findings/metrics?${params.toString()}`);
+}
+
+// Rules API
+export async function getRules(tenantId?: string): Promise<RulesResponse> {
+  const params = new URLSearchParams();
+  if (tenantId) {
+    params.append('tenant_id', tenantId);
+  }
+  
+  const url = params.toString() ? `/rules?${params.toString()}` : '/rules';
+  return fetchAPI(url);
+}
+
+export async function getRule(ruleId: string, tenantId?: string): Promise<Rule> {
+  const params = new URLSearchParams();
+  if (tenantId) {
+    params.append('tenant_id', tenantId);
+  }
+  
+  const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
+  return fetchAPI(url);
+}
+
+export async function createRule(
+  rule: RuleCreateRequest,
+  tenantId?: string
+): Promise<Rule> {
+  const params = new URLSearchParams();
+  if (tenantId) {
+    params.append('tenant_id', tenantId);
+  }
+  
+  const url = params.toString() ? `/rules?${params.toString()}` : '/rules';
+  return fetchAPI(url, {
+    method: 'POST',
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function updateRule(
+  ruleId: string,
+  updates: RuleUpdateRequest,
+  tenantId?: string
+): Promise<Rule> {
+  const params = new URLSearchParams();
+  if (tenantId) {
+    params.append('tenant_id', tenantId);
+  }
+  
+  const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
+  return fetchAPI(url, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteRule(ruleId: string, tenantId?: string): Promise<{ message: string }> {
+  const params = new URLSearchParams();
+  if (tenantId) {
+    params.append('tenant_id', tenantId);
+  }
+  
+  const url = params.toString() ? `/rules/${ruleId}?${params.toString()}` : `/rules/${ruleId}`;
+  return fetchAPI(url, {
+    method: 'DELETE',
+  });
 }

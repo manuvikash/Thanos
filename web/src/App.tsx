@@ -15,6 +15,7 @@ import { ROUTES } from './routes'
 import { SidebarInset } from './components/ui/sidebar'
 import RegistrationPage from './pages/RegistrationPage'
 import LandingPage from './pages/LandingPage'
+import { RulesPage } from './pages/RulesPage'
 
 function App() {
   const { showToast } = useToast()
@@ -164,6 +165,9 @@ function App() {
                 />
               }
             />
+
+            {/* Rules Management route */}
+            <Route path={ROUTES.RULES} element={<RulesPage />} />
 
             {/* Catch-all route for invalid paths - redirect to default with toast notification */}
             <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />

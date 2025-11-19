@@ -133,3 +133,87 @@ def load_rules(rules_source: str, tenant_id: str, rules_bucket: Optional[str] = 
         return read_rules_from_repo()
     else:
         raise ValueError(f"Invalid rules_source: {rules_source}")
+
+
+def load_rules_from_dynamodb(tenant_id: str, rules_table: str) -> List[Rule]:
+    """
+    Load rules from DynamoDB only.
+    Combines global default rules + tenant-specific custom rules.
+    Tenant rules override global rules with same ID.
+    
+    Args:
+        tenant_id: Tenant identifier
+        rules_table: DynamoDB table name for rules
+        
+    Returns:
+        List of Rule objects
+    """
+    import boto3
+    from botocore.exceptions import ClientError
+    
+    dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
+    table = dynamodb.Table(rules_table)
+    
+    rules_dict = {}
+    
+    # 1. Load global rules (includes defaults + global custom)
+    try:
+        response = table.query(
+            KeyConditionExpression="PK = :pk",
+            ExpressionAttributeValues={":pk": "GLOBAL#RULE"},
+        )
+        
+        for item in response.get("Items", []):
+            if item.get("enabled", True):
+                rule_data = {
+                    "id": item["rule_id"],
+                    "resource_type": item["resource_type"],
+                    "check": item["check"],
+                    "severity": item["severity"],
+                    "message": item["message"],
+                    "category": item.get("category", "compliance"),
+                    "selector": item.get("selector", {}),
+                }
+                rules_dict[rule_data["id"]] = Rule.from_dict(rule_data)
+        
+        logger.info(f"Loaded {len(rules_dict)} global rules from DynamoDB")
+    except ClientError as e:
+        logger.error(f"Error loading global rules: {e}")
+        raise
+    
+    # 2. Load tenant-specific custom rules (override globals)
+    try:
+        response = table.query(
+            IndexName="TenantRulesIndex",
+            KeyConditionExpression="tenant_id = :tid",
+            ExpressionAttributeValues={":tid": tenant_id},
+        )
+        
+        tenant_rule_count = 0
+        for item in response.get("Items", []):
+            if item.get("enabled", True):
+                rule_data = {
+                    "id": item["rule_id"],
+                    "resource_type": item["resource_type"],
+                    "check": item["check"],
+                    "severity": item["severity"],
+                    "message": item["message"],
+                    "category": item.get("category", "compliance"),
+                    "selector": item.get("selector", {}),
+                }
+                rules_dict[rule_data["id"]] = Rule.from_dict(rule_data)
+                tenant_rule_count += 1
+        
+        if tenant_rule_count > 0:
+            logger.info(f"Loaded {tenant_rule_count} tenant-specific rules for {tenant_id}")
+    except ClientError as e:
+        logger.warning(f"Could not load tenant rules: {e}")
+    
+    total_rules = len(rules_dict)
+    logger.info(f"Total active rules: {total_rules}")
+    
+    if total_rules == 0:
+        logger.warning("No rules loaded! Rules table may not be initialized.")
+    
+    return list(rules_dict.values())
+
