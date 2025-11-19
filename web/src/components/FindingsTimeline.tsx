@@ -26,9 +26,9 @@ export function FindingsTimeline({ timeline }: FindingsTimelineProps) {
   // Handle empty state
   if (timeline.length === 0) {
     return (
-      <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-        <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Findings Timeline</div>
-        <div className="flex items-center justify-center h-64 text-neutral-500">
+      <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+        <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Findings Timeline</div>
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
           No timeline data available
         </div>
       </div>
@@ -142,8 +142,8 @@ export function FindingsTimeline({ timeline }: FindingsTimelineProps) {
   }
 
   return (
-    <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-      <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Findings Timeline</div>
+    <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+      <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Findings Timeline</div>
 
       <div className="relative">
         <svg
@@ -253,11 +253,11 @@ export function FindingsTimeline({ timeline }: FindingsTimelineProps) {
               transform: 'translate(-50%, -100%)',
             }}
           >
-            <div className="text-xs text-neutral-400 mb-2 font-mono-custom">
+            <div className="text-xs text-muted-foreground mb-2 font-mono-custom">
               {formatTimestamp(timeline[hoveredPoint].timestamp)}
             </div>
             <div className="space-y-1">
-              <div className="text-sm font-bold text-neutral-100 mb-2">
+              <div className="text-sm font-bold text-foreground mb-2">
                 Total: {timeline[hoveredPoint].total}
               </div>
               {SEVERITY_ORDER.map((severity) => {
@@ -270,10 +270,10 @@ export function FindingsTimeline({ timeline }: FindingsTimelineProps) {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: SEVERITY_CONFIG[severity].color }}
                     />
-                    <span className="text-neutral-300">
+                    <span className="text-card-foreground">
                       {SEVERITY_CONFIG[severity].label}:
                     </span>
-                    <span className="font-bold text-neutral-100">{count}</span>
+                    <span className="font-bold text-foreground">{count}</span>
                   </div>
                 )
               })}
@@ -290,7 +290,7 @@ export function FindingsTimeline({ timeline }: FindingsTimelineProps) {
               className="w-3 h-3 rounded-sm"
               style={{ backgroundColor: SEVERITY_CONFIG[severity].color }}
             />
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs text-muted-foreground">
               {SEVERITY_CONFIG[severity].label}
             </span>
           </div>

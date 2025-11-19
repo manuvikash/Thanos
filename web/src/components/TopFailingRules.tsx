@@ -37,9 +37,9 @@ export function TopFailingRules({ rules }: TopFailingRulesProps) {
   // Handle empty state
   if (topRules.length === 0) {
     return (
-      <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-        <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Top Failing Rules</div>
-        <div className="flex items-center justify-center h-48 text-neutral-500">
+      <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+        <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Top Failing Rules</div>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
           No rules to display
         </div>
       </div>
@@ -47,8 +47,8 @@ export function TopFailingRules({ rules }: TopFailingRulesProps) {
   }
 
   return (
-    <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-      <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Top Failing Rules</div>
+    <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+      <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Top Failing Rules</div>
 
       <div className="space-y-3">
         {topRules.map((rule, index) => {
@@ -61,7 +61,7 @@ export function TopFailingRules({ rules }: TopFailingRulesProps) {
             >
               {/* Rank number */}
               <div className="flex-shrink-0 w-6 text-center">
-                <span className="text-sm font-bold text-neutral-400">
+                <span className="text-sm font-bold text-muted-foreground">
                   {index + 1}
                 </span>
               </div>
@@ -75,7 +75,7 @@ export function TopFailingRules({ rules }: TopFailingRulesProps) {
 
               {/* Rule ID with monospace font */}
               <div className="flex-1 min-w-0">
-                <code className="text-sm text-neutral-200 font-mono-custom break-all">
+                <code className="text-sm text-card-foreground font-mono-custom break-all">
                   {rule.rule_id}
                 </code>
               </div>
@@ -84,7 +84,7 @@ export function TopFailingRules({ rules }: TopFailingRulesProps) {
               <div
                 className={`flex-shrink-0 px-3 py-1 rounded-md ${severityConfig.bgColor}`}
               >
-                <span className="text-sm font-bold text-neutral-100">
+                <span className="text-sm font-bold text-foreground">
                   {rule.count}
                 </span>
               </div>

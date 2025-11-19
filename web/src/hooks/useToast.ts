@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { toast } from 'sonner'
 
 export interface ToastMessage {
   id: string
@@ -7,19 +7,32 @@ export interface ToastMessage {
 }
 
 export function useToast() {
-  const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const showToast = (message: string, type: ToastMessage['type'] = 'info') => {
+    // Map existing toast types to Sonner variants
+    switch (type) {
+      case 'success':
+        toast.success(message, { duration: 5000 })
+        break
+      case 'error':
+        toast.error(message, { duration: 5000 })
+        break
+      case 'warning':
+        toast.warning(message, { duration: 5000 })
+        break
+      case 'info':
+      default:
+        toast.info(message, { duration: 5000 })
+        break
+    }
+  }
 
-  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
-    const id = `toast-${Date.now()}-${Math.random()}`
-    setToasts((prev) => [...prev, { id, message, type }])
-  }, [])
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }, [])
+  // Maintain backward compatibility - these are no longer needed but kept for API compatibility
+  const removeToast = (_id: string) => {
+    // Sonner handles dismissal automatically
+  }
 
   return {
-    toasts,
+    toasts: [], // Empty array for backward compatibility
     showToast,
     removeToast,
   }

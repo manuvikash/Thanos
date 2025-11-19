@@ -1,8 +1,9 @@
+import { Inbox } from 'lucide-react'
 import { DashboardMetrics } from '../api'
 import { SectionHeader } from './SectionHeader'
 import { DashboardMetrics as DashboardMetricsWidget } from './DashboardMetrics'
-import { EmptyState, EmptyIcon } from './EmptyState'
-import { ErrorState } from './ErrorState'
+import { EmptyState } from './shared/EmptyState'
+import { ErrorAlert } from './shared/ErrorAlert'
 import { OverviewMetricsSkeleton } from './LoadingSkeleton'
 
 interface OverviewMetricsSectionProps {
@@ -36,16 +37,16 @@ export function OverviewMetricsSection({
           {loading && !metrics ? (
             <OverviewMetricsSkeleton />
           ) : error ? (
-            <ErrorState
+            <ErrorAlert
               title="Failed to Load Metrics"
               message={error}
               onRetry={onRefresh}
             />
           ) : !metrics ? (
             <EmptyState
-              icon={<EmptyIcon />}
+              icon={Inbox}
               title="No Data Available"
-              message="Run a scan to view overview metrics for this tenant."
+              description="Run a scan to view overview metrics for this tenant."
             />
           ) : (
             <DashboardMetricsWidget

@@ -1,8 +1,9 @@
+import { AlertCircle } from 'lucide-react'
 import { DashboardMetrics } from '../api'
 import { SectionHeader } from './SectionHeader'
-import { SeverityDistribution } from './SeverityDistribution'
-import { EmptyState, EmptyIcon } from './EmptyState'
-import { ErrorState } from './ErrorState'
+import { SeverityChart } from './dashboard/SeverityChart'
+import { EmptyState } from './shared/EmptyState'
+import { ErrorAlert } from './shared/ErrorAlert'
 import { SeverityDistributionSkeleton } from './LoadingSkeleton'
 
 interface SeverityDistributionSectionProps {
@@ -39,19 +40,19 @@ export function SeverityDistributionSection({
           {loading && !metrics ? (
             <SeverityDistributionSkeleton />
           ) : error ? (
-            <ErrorState
+            <ErrorAlert
               title="Failed to Load Distribution"
               message={error}
               onRetry={onRefresh}
             />
           ) : !metrics || !hasFindings ? (
             <EmptyState
-              icon={<EmptyIcon />}
+              icon={AlertCircle}
               title="No Findings"
-              message="No findings available to display severity distribution. Run a scan to see the breakdown."
+              description="No findings available to display severity distribution. Run a scan to see the breakdown."
             />
           ) : (
-            <SeverityDistribution severityCounts={metrics.current_scan.severity_counts} />
+            <SeverityChart severityCounts={metrics.current_scan.severity_counts} />
           )}
         </div>
       </div>

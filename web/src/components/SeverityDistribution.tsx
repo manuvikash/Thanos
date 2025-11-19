@@ -45,9 +45,9 @@ export function SeverityDistribution({ severityCounts }: SeverityDistributionPro
   // If no findings, show empty state
   if (total === 0) {
     return (
-      <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-        <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Severity Distribution</div>
-        <div className="flex items-center justify-center h-48 text-neutral-500">
+      <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+        <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Severity Distribution</div>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
           No findings to display
         </div>
       </div>
@@ -111,8 +111,8 @@ export function SeverityDistribution({ severityCounts }: SeverityDistributionPro
   })
 
   return (
-    <div className="bg-[#102020]/50 border border-neutral-800 rounded-lg p-6 backdrop-blur-sm">
-      <div className="text-sm text-neutral-400 mb-4 font-mono-custom">Severity Distribution</div>
+    <div className="bg-card border rounded-lg p-6 backdrop-blur-sm">
+      <div className="text-sm text-muted-foreground mb-4 font-mono-custom">Severity Distribution</div>
 
       <div className="flex flex-col md:flex-row items-center gap-6">
         {/* Donut Chart */}
@@ -176,13 +176,13 @@ export function SeverityDistribution({ severityCounts }: SeverityDistributionPro
               aria-live="polite"
             >
               <div className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 shadow-lg">
-                <div className="text-xs text-neutral-300 font-semibold">
+                <div className="text-xs text-card-foreground font-semibold">
                   {SEVERITY_CONFIG[hoveredSeverity].label}
                 </div>
-                <div className="text-sm text-neutral-100 font-bold">
+                <div className="text-sm text-foreground font-bold">
                   {severityCounts[hoveredSeverity]}
                 </div>
-                <div className="text-xs text-neutral-400">
+                <div className="text-xs text-muted-foreground">
                   {((severityCounts[hoveredSeverity] / total) * 100).toFixed(1)}%
                 </div>
               </div>
@@ -217,15 +217,15 @@ export function SeverityDistribution({ severityCounts }: SeverityDistributionPro
                     style={{ backgroundColor: segment.config.color }}
                     aria-hidden="true"
                   />
-                  <span className="text-sm text-neutral-300 font-medium">
+                  <span className="text-sm text-card-foreground font-medium">
                     {segment.config.label}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-neutral-400 font-mono-custom">
+                  <span className="text-sm text-muted-foreground font-mono-custom">
                     {segment.percentage.toFixed(1)}%
                   </span>
-                  <span className="text-sm font-bold text-neutral-100 min-w-[3rem] text-right">
+                  <span className="text-sm font-bold text-foreground min-w-[3rem] text-right">
                     {segment.count}
                   </span>
                 </div>

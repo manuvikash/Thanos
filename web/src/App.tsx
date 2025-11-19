@@ -1,19 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Header } from './components/Header'
 import ResourcesModal from './components/ResourcesModal'
-import { Sidebar } from './components/Sidebar'
-import { MainLayout } from './components/MainLayout'
+import { AppLayout } from './components/layout/AppLayout'
+import { AppSidebar } from './components/layout/AppSidebar'
 import { ContentArea } from './components/ContentArea'
-import { Toast } from './components/Toast'
+import { Toaster } from './components/ui/sonner'
 import { InvalidRouteHandler } from './components/InvalidRouteHandler'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { BackgroundSphere } from './components/BackgroundSphere'
 import { useToast } from './hooks/useToast'
 import { Finding } from './api'
 import { ROUTES } from './routes'
+import { SidebarInset } from './components/ui/sidebar'
 
 function App() {
-  const [sidebarCollapsed] = useState(false)
-  const { toasts, showToast, removeToast } = useToast()
+  const { showToast } = useToast()
 
   // Existing state management
   const [findings, setFindings] = useState<Finding[]>([])
@@ -22,25 +24,25 @@ function App() {
   const [scanStats, setScanStats] = useState<{ resources: number; findings: number } | null>(null)
   const [showResourcesModal, setShowResourcesModal] = useState(false)
   const [snapshotKey, setSnapshotKey] = useState<string>('')
-  
-  // Filter state for FindingsTable persistence
-  const [severityFilter, setSeverityFilter] = useState<string[]>([])
-  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('')
 
   const handleScanComplete = (newFindings: Finding[], stats: { resources: number; findings: number }, tenant: string, snapshot: string) => {
     setFindings(newFindings)
     setScanStats(stats)
     setTenantId(tenant)
     setSnapshotKey(snapshot)
+    showToast(`Scan completed successfully! Found ${stats.findings} findings across ${stats.resources} resources.`, 'success')
   }
-  
-  // Clear filters when tenant changes
-  useEffect(() => {
-    if (tenantId) {
-      setSeverityFilter([])
-      setResourceTypeFilter('')
-    }
-  }, [tenantId])
+
+  const handleScanError = (error: string) => {
+    showToast(`Scan failed: ${error}`, 'error')
+  }
+
+  const handleReset = () => {
+    setFindings([])
+    setTenantId('')
+    setScanStats(null)
+    setSnapshotKey('')
+  }
 
   // Note: Resources modal functionality was part of old DashboardView
   // This can be re-implemented in a future task if needed
@@ -59,128 +61,116 @@ function App() {
   }, [showToast])
 
   return (
-    <BrowserRouter>
-      <Sidebar 
-        isCollapsed={sidebarCollapsed}
-      />
-      
-      <MainLayout sidebarCollapsed={sidebarCollapsed}>
-        <Header />
-        
-        <main>
-          <Routes>
-            {/* Root redirect to default dashboard section */}
-            <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.DASHBOARD.OVERVIEW_METRICS} replace />} />
-            
-            {/* Dashboard section routes */}
-            <Route 
-              path={ROUTES.DASHBOARD.OVERVIEW_METRICS} 
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  onScanComplete={handleScanComplete}
-                  onLoadingChange={setLoading}
-                  severityFilter={severityFilter}
-                  resourceTypeFilter={resourceTypeFilter}
-                  onSeverityFilterChange={setSeverityFilter}
-                  onResourceTypeFilterChange={setResourceTypeFilter}
-                />
-              } 
-            />
-            <Route 
-              path={ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION} 
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  onScanComplete={handleScanComplete}
-                  onLoadingChange={setLoading}
-                  severityFilter={severityFilter}
-                  resourceTypeFilter={resourceTypeFilter}
-                  onSeverityFilterChange={setSeverityFilter}
-                  onResourceTypeFilterChange={setResourceTypeFilter}
-                />
-              } 
-            />
-            <Route 
-              path={ROUTES.DASHBOARD.TOP_FAILING_RULES} 
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  onScanComplete={handleScanComplete}
-                  onLoadingChange={setLoading}
-                  severityFilter={severityFilter}
-                  resourceTypeFilter={resourceTypeFilter}
-                  onSeverityFilterChange={setSeverityFilter}
-                  onResourceTypeFilterChange={setResourceTypeFilter}
-                />
-              } 
-            />
-            <Route 
-              path={ROUTES.DASHBOARD.FINDINGS_TIMELINE} 
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  onScanComplete={handleScanComplete}
-                  onLoadingChange={setLoading}
-                  severityFilter={severityFilter}
-                  resourceTypeFilter={resourceTypeFilter}
-                  onSeverityFilterChange={setSeverityFilter}
-                  onResourceTypeFilterChange={setResourceTypeFilter}
-                />
-              } 
-            />
-            
-            {/* Findings Table route */}
-            <Route 
-              path={ROUTES.FINDINGS} 
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  onScanComplete={handleScanComplete}
-                  onLoadingChange={setLoading}
-                  severityFilter={severityFilter}
-                  resourceTypeFilter={resourceTypeFilter}
-                  onSeverityFilterChange={setSeverityFilter}
-                  onResourceTypeFilterChange={setResourceTypeFilter}
-                />
-              } 
-            />
-            
-            {/* Catch-all route for invalid paths - redirect to default with toast notification */}
-            <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />
-          </Routes>
-        </main>
-      </MainLayout>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AppLayout>
+          <AppSidebar />
 
-      {/* Resources Modal */}
-      <ResourcesModal
-        isOpen={showResourcesModal}
-        onClose={handleCloseResourcesModal}
-        tenantId={tenantId}
-        snapshotKey={snapshotKey}
-        totalCount={scanStats?.resources || 0}
-      />
+          <SidebarInset className="relative">
+            {/* Background decorative sphere - theme-aware */}
+            <BackgroundSphere />
 
-      {/* Toast Notifications */}
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
+            <Header />
+
+            <main className="relative z-10">
+              <Routes>
+                {/* Root redirect to default dashboard section */}
+                <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.DASHBOARD.OVERVIEW_METRICS} replace />} />
+
+                {/* Dashboard section routes */}
+                <Route
+                  path={ROUTES.DASHBOARD.OVERVIEW_METRICS}
+                  element={
+                    <ContentArea
+                      tenantId={tenantId}
+                      findings={findings}
+                      loading={loading}
+                      onScanComplete={handleScanComplete}
+                      onScanError={handleScanError}
+                      onLoadingChange={setLoading}
+                      onReset={handleReset}
+                    />
+                  }
+                />
+                <Route
+                  path={ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION}
+                  element={
+                    <ContentArea
+                      tenantId={tenantId}
+                      findings={findings}
+                      loading={loading}
+                      onScanComplete={handleScanComplete}
+                      onScanError={handleScanError}
+                      onLoadingChange={setLoading}
+                      onReset={handleReset}
+                    />
+                  }
+                />
+                <Route
+                  path={ROUTES.DASHBOARD.TOP_FAILING_RULES}
+                  element={
+                    <ContentArea
+                      tenantId={tenantId}
+                      findings={findings}
+                      loading={loading}
+                      onScanComplete={handleScanComplete}
+                      onScanError={handleScanError}
+                      onLoadingChange={setLoading}
+                      onReset={handleReset}
+                    />
+                  }
+                />
+                <Route
+                  path={ROUTES.DASHBOARD.FINDINGS_TIMELINE}
+                  element={
+                    <ContentArea
+                      tenantId={tenantId}
+                      findings={findings}
+                      loading={loading}
+                      onScanComplete={handleScanComplete}
+                      onScanError={handleScanError}
+                      onLoadingChange={setLoading}
+                      onReset={handleReset}
+                    />
+                  }
+                />
+
+                {/* Findings Table route */}
+                <Route
+                  path={ROUTES.FINDINGS}
+                  element={
+                    <ContentArea
+                      tenantId={tenantId}
+                      findings={findings}
+                      loading={loading}
+                      onScanComplete={handleScanComplete}
+                      onScanError={handleScanError}
+                      onLoadingChange={setLoading}
+                      onReset={handleReset}
+                    />
+                  }
+                />
+
+                {/* Catch-all route for invalid paths - redirect to default with toast notification */}
+                <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />
+              </Routes>
+            </main>
+          </SidebarInset>
+        </AppLayout>
+
+        {/* Resources Modal */}
+        <ResourcesModal
+          isOpen={showResourcesModal}
+          onClose={handleCloseResourcesModal}
+          tenantId={tenantId}
+          snapshotKey={snapshotKey}
+          totalCount={scanStats?.resources || 0}
         />
-      ))}
-    </BrowserRouter>
+
+        {/* Sonner Toast Notifications */}
+        <Toaster position="top-center" richColors closeButton />
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
