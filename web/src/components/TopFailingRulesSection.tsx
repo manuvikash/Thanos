@@ -1,8 +1,9 @@
+import { FileX } from 'lucide-react'
 import { DashboardMetrics } from '../api'
 import { SectionHeader } from './SectionHeader'
-import { TopFailingRules } from './TopFailingRules'
-import { EmptyState, EmptyIcon } from './EmptyState'
-import { ErrorState } from './ErrorState'
+import { TopRulesChart } from './dashboard/TopRulesChart'
+import { EmptyState } from './shared/EmptyState'
+import { ErrorAlert } from './shared/ErrorAlert'
 import { TopFailingRulesSkeleton } from './LoadingSkeleton'
 
 interface TopFailingRulesSectionProps {
@@ -39,19 +40,19 @@ export function TopFailingRulesSection({
           {loading && !metrics ? (
             <TopFailingRulesSkeleton />
           ) : error ? (
-            <ErrorState
+            <ErrorAlert
               title="Failed to Load Rules"
               message={error}
               onRetry={onRefresh}
             />
           ) : !metrics || !hasRules ? (
             <EmptyState
-              icon={<EmptyIcon />}
+              icon={FileX}
               title="No Rules"
-              message="No failing rules to display. Run a scan to see which rules are failing most frequently."
+              description="No failing rules to display. Run a scan to see which rules are failing most frequently."
             />
           ) : (
-            <TopFailingRules rules={metrics.top_rules} />
+            <TopRulesChart rules={metrics.top_rules} />
           )}
         </div>
       </div>

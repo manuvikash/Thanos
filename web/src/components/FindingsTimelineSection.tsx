@@ -1,8 +1,9 @@
+import { TrendingUp } from 'lucide-react'
 import { DashboardMetrics } from '../api'
 import { SectionHeader } from './SectionHeader'
-import { FindingsTimeline } from './FindingsTimeline'
-import { EmptyState, EmptyIcon } from './EmptyState'
-import { ErrorState } from './ErrorState'
+import { TimelineChart } from './dashboard/TimelineChart'
+import { EmptyState } from './shared/EmptyState'
+import { ErrorAlert } from './shared/ErrorAlert'
 import { FindingsTimelineSkeleton } from './LoadingSkeleton'
 
 interface FindingsTimelineSectionProps {
@@ -38,19 +39,19 @@ export function FindingsTimelineSection({
         {loading && !metrics ? (
           <FindingsTimelineSkeleton />
         ) : error ? (
-          <ErrorState
+          <ErrorAlert
             title="Failed to Load Timeline"
             message={error}
             onRetry={onRefresh}
           />
         ) : !metrics || !hasTimelineData ? (
           <EmptyState
-            icon={<EmptyIcon />}
+            icon={TrendingUp}
             title="Insufficient Data"
-            message="Not enough scan history to display timeline. Run more scans to build up historical data."
+            description="Not enough scan history to display timeline. Run more scans to build up historical data."
           />
         ) : (
-          <FindingsTimeline timeline={metrics.timeline} />
+          <TimelineChart timeline={metrics.timeline} />
         )}
       </div>
     </div>

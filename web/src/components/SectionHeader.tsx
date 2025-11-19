@@ -35,12 +35,12 @@ function formatRelativeTime(date: Date): string {
 
 export function SectionHeader({ title, lastUpdated, onRefresh, loading = false }: SectionHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-800">
-      <h2 className="text-xl font-semibold text-neutral-100">{title}</h2>
+    <div className="flex items-center justify-between mb-6 pb-4 border-b">
+      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
       
       <div className="flex items-center gap-4">
         {lastUpdated && (
-          <span className="text-sm text-neutral-400 font-mono-custom">
+          <span className="text-sm text-muted-foreground font-mono-custom">
             Updated {formatRelativeTime(lastUpdated)}
           </span>
         )}
@@ -48,11 +48,11 @@ export function SectionHeader({ title, lastUpdated, onRefresh, loading = false }
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Refresh section data"
         >
           <svg
-            className={`w-4 h-4 text-neutral-300 ${loading ? 'animate-spin' : ''}`}
+            className={`w-4 h-4 text-secondary-foreground ${loading ? 'animate-spin' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -65,7 +65,7 @@ export function SectionHeader({ title, lastUpdated, onRefresh, loading = false }
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span className="text-sm text-neutral-300">Refresh</span>
+          <span className="text-sm text-secondary-foreground">Refresh</span>
         </button>
       </div>
     </div>

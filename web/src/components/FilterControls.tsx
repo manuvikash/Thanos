@@ -66,10 +66,10 @@ export default function FilterControls({
   }
 
   return (
-    <div className="px-4 sm:px-6 py-4 border-b border-neutral-800">
+    <div className="px-4 sm:px-6 py-4 border-b">
       {/* Mobile: Stacked layout, Tablet+: Horizontal layout with wrapping */}
       <div className="flex flex-col md:flex-row md:items-center md:flex-wrap gap-3">
-        <span className="text-sm text-neutral-400 font-medium">Filters:</span>
+        <span className="text-sm text-muted-foreground font-medium">Filters:</span>
         
         {/* Filter controls container - allows wrapping on tablet */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 flex-1">
@@ -77,10 +77,10 @@ export default function FilterControls({
           <div className="relative sm:flex-shrink-0" ref={severityDropdownRef}>
             <button
               onClick={() => setSeverityDropdownOpen(!severityDropdownOpen)}
-              className={`w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 flex items-center gap-2 sm:min-w-[160px] justify-between ${
+              className={`w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring flex items-center gap-2 sm:min-w-[160px] justify-between ${
                 severityFilter.length > 0
-                  ? 'bg-[#0C1A1A] border-2 border-cyan-400 text-cyan-400'
-                  : 'bg-[#0C1A1A] border border-neutral-700 text-neutral-300 hover:bg-[#102020]'
+                  ? 'bg-accent border-2 border-primary text-primary'
+                  : 'bg-secondary border text-secondary-foreground hover:bg-secondary/80'
               }`}
               aria-label="Filter by severity"
             >
@@ -96,20 +96,20 @@ export default function FilterControls({
             </button>
 
             {severityDropdownOpen && (
-              <div className="absolute z-10 mt-2 w-full sm:w-56 bg-[#0C1A1A] border border-neutral-700 rounded-md shadow-lg">
+              <div className="absolute z-10 mt-2 w-full sm:w-56 bg-popover border rounded-md shadow-lg">
                 <div className="py-2">
                   {SEVERITY_OPTIONS.map((severity) => (
                     <label
                       key={severity}
-                      className="flex items-center px-4 py-2 hover:bg-[#102020] cursor-pointer transition-colors"
+                      className="flex items-center px-4 py-2 hover:bg-accent cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
                         checked={severityFilter.includes(severity)}
                         onChange={() => handleSeverityToggle(severity)}
-                        className="w-4 h-4 text-cyan-400 bg-neutral-800 border-neutral-600 rounded focus:ring-cyan-500 focus:ring-2"
+                        className="w-4 h-4 text-primary bg-input border rounded focus:ring-ring focus:ring-2"
                       />
-                      <span className="ml-3 text-sm text-neutral-300">{severity}</span>
+                      <span className="ml-3 text-sm text-popover-foreground">{severity}</span>
                     </label>
                   ))}
                 </div>
@@ -121,10 +121,10 @@ export default function FilterControls({
           <div className="relative sm:flex-shrink-0" ref={resourceTypeDropdownRef}>
             <button
               onClick={() => setResourceTypeDropdownOpen(!resourceTypeDropdownOpen)}
-              className={`w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 flex items-center gap-2 sm:min-w-[180px] justify-between ${
+              className={`w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring flex items-center gap-2 sm:min-w-[180px] justify-between ${
                 resourceTypeFilter
-                  ? 'bg-[#0C1A1A] border-2 border-cyan-400 text-cyan-400'
-                  : 'bg-[#0C1A1A] border border-neutral-700 text-neutral-300 hover:bg-[#102020]'
+                  ? 'bg-accent border-2 border-primary text-primary'
+                  : 'bg-secondary border text-secondary-foreground hover:bg-secondary/80'
               }`}
               aria-label="Filter by resource type"
             >
@@ -140,14 +140,14 @@ export default function FilterControls({
             </button>
 
             {resourceTypeDropdownOpen && (
-              <div className="absolute z-10 mt-2 w-full sm:w-56 bg-[#0C1A1A] border border-neutral-700 rounded-md shadow-lg max-h-64 overflow-y-auto">
+              <div className="absolute z-10 mt-2 w-full sm:w-56 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
                 <div className="py-2">
                   <button
                     onClick={() => handleResourceTypeSelect('')}
                     className={`w-full text-left px-4 py-2 text-sm transition-colors ${
                       !resourceTypeFilter
-                        ? 'bg-[#102020] text-cyan-400'
-                        : 'text-neutral-300 hover:bg-[#102020]'
+                        ? 'bg-accent text-primary'
+                        : 'text-popover-foreground hover:bg-accent'
                     }`}
                   >
                     All Resource Types
@@ -158,8 +158,8 @@ export default function FilterControls({
                       onClick={() => handleResourceTypeSelect(type)}
                       className={`w-full text-left px-4 py-2 text-sm font-mono transition-colors ${
                         resourceTypeFilter === type
-                          ? 'bg-[#102020] text-cyan-400'
-                          : 'text-neutral-300 hover:bg-[#102020]'
+                          ? 'bg-accent text-primary'
+                          : 'text-popover-foreground hover:bg-accent'
                       }`}
                     >
                       {type}
@@ -174,7 +174,7 @@ export default function FilterControls({
           {hasActiveFilters && (
             <button
               onClick={onClearFilters}
-              className="w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium bg-neutral-700 hover:bg-neutral-600 text-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 sm:flex-shrink-0"
+              className="w-full sm:w-auto px-4 py-2 rounded-md text-sm font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring sm:flex-shrink-0"
               aria-label="Clear all filters"
             >
               Clear Filters

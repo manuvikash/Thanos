@@ -56,7 +56,7 @@ export class DashboardErrorBoundary extends Component<
     if (this.state.hasError) {
       // Fallback UI when error occurs
       return (
-        <div className="bg-[#102020]/50 border border-red-900/50 rounded-lg p-12 backdrop-blur-sm text-center">
+        <div className="bg-card border border-destructive/50 rounded-lg p-12 backdrop-blur-sm text-center">
           <div className="text-red-400 mb-4">
             <svg
               className="w-16 h-16 mx-auto mb-4"
@@ -73,17 +73,17 @@ export class DashboardErrorBoundary extends Component<
               />
             </svg>
             <p className="text-lg font-medium mb-2">Dashboard Error</p>
-            <p className="text-sm text-neutral-400 mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               {this.state.error?.message || 'An unexpected error occurred while rendering the dashboard'}
             </p>
             
             {/* Show error details in development */}
             {import.meta.env.DEV && this.state.error && (
               <details className="mt-4 text-left">
-                <summary className="cursor-pointer text-sm text-neutral-500 hover:text-neutral-400 mb-2">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground mb-2">
                   Error Details (Development Only)
                 </summary>
-                <div className="bg-neutral-900/50 border border-neutral-800 rounded p-4 text-xs font-mono text-neutral-300 overflow-auto max-h-48">
+                <div className="bg-muted/50 border rounded p-4 text-xs font-mono text-muted-foreground overflow-auto max-h-48">
                   <div className="mb-2">
                     <strong>Error:</strong> {this.state.error.toString()}
                   </div>
@@ -105,7 +105,7 @@ export class DashboardErrorBoundary extends Component<
 
             <button
               onClick={this.handleReload}
-              className="mt-6 px-6 py-2 bg-cyan-500 hover:bg-cyan-600 text-neutral-900 font-semibold rounded-lg transition-colors"
+              className="mt-6 px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-colors"
               aria-label="Reload dashboard"
             >
               Reload Dashboard

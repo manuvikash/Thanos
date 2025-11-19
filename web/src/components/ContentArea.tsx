@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import HorizontalScanBar from './HorizontalScanBar'
 import { OverviewMetricsSection } from './OverviewMetricsSection'
@@ -6,19 +6,23 @@ import { SeverityDistributionSection } from './SeverityDistributionSection'
 import { TopFailingRulesSection } from './TopFailingRulesSection'
 import { FindingsTimelineSection } from './FindingsTimelineSection'
 import { FindingsTableSection } from './FindingsTableSection'
-import { Finding, DashboardMetrics, getDashboardMetrics } from '../api'
+import { Finding } from '../api'
 import { ROUTES } from '../routes'
+import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 
 interface ContentAreaProps {
   tenantId: string
   findings: Finding[]
   loading: boolean
-  onScanComplete: (findings: Finding[], stats: { resources: number; findings: number }, tenantId: string, snapshotKey: string) => void
+  onScanComplete: (
+    findings: Finding[],
+    stats: { resources: number; findings: number },
+    tenantId: string,
+    snapshotKey: string
+  ) => void
+  onScanError: (error: string) => void
   onLoadingChange: (loading: boolean) => void
-  severityFilter: string[]
-  resourceTypeFilter: string
-  onSeverityFilterChange: (severities: string[]) => void
-  onResourceTypeFilterChange: (type: string) => void
+  onReset: () => void
 }
 
 export function ContentArea({
@@ -26,94 +30,36 @@ export function ContentArea({
   findings,
   loading,
   onScanComplete: originalOnScanComplete,
+  onScanError,
   onLoadingChange,
-  severityFilter,
-  resourceTypeFilter,
-  onSeverityFilterChange,
-  onResourceTypeFilterChange,
+  onReset,
 }: ContentAreaProps) {
   const location = useLocation()
-  
-  // Dashboard metrics state
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(false)
-  const [metricsError, setMetricsError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  
-  // Cache to avoid redundant API calls
-  const metricsCache = useRef<{
-    tenantId: string
-    data: DashboardMetrics
-    timestamp: number
-  } | null>(null)
-  
+
+  // Use custom hook for dashboard metrics
+  const {
+    metrics,
+    loading: metricsLoading,
+    error: metricsError,
+    lastUpdated,
+    refreshMetrics,
+  } = useDashboardMetrics({ tenantId })
+
   // Scroll position tracking for each section
   const scrollPositions = useRef<Record<string, number>>({})
   const contentRef = useRef<HTMLDivElement>(null)
   const previousPath = useRef<string>(location.pathname)
-  
-  // Cache duration: 30 seconds
-  const CACHE_DURATION_MS = 30000
-  
-  // Shared metrics fetching function
-  const fetchMetrics = useCallback(async (forceRefresh = false) => {
-    if (!tenantId) {
-      setMetrics(null)
-      setMetricsError(null)
-      setLastUpdated(null)
-      return
-    }
-    
-    // Check cache if not forcing refresh
-    if (!forceRefresh && metricsCache.current) {
-      const { tenantId: cachedTenantId, data, timestamp } = metricsCache.current
-      const now = Date.now()
-      
-      // Use cached data if it's for the same tenant and not expired
-      if (cachedTenantId === tenantId && now - timestamp < CACHE_DURATION_MS) {
-        setMetrics(data)
-        setMetricsError(null)
-        return
-      }
-    }
-    
-    setMetricsLoading(true)
-    setMetricsError(null)
-    
-    try {
-      const data = await getDashboardMetrics(tenantId)
-      setMetrics(data)
-      setLastUpdated(new Date())
-      
-      // Update cache
-      metricsCache.current = {
-        tenantId,
-        data,
-        timestamp: Date.now(),
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load dashboard metrics'
-      setMetricsError(errorMessage)
-    } finally {
-      setMetricsLoading(false)
-    }
-  }, [tenantId])
-  
-  // Fetch metrics when tenantId changes
-  useEffect(() => {
-    fetchMetrics()
-  }, [fetchMetrics])
-  
+
   // Save scroll position when navigating away from a section
   useEffect(() => {
     const currentPath = location.pathname
-    
+
     // Save scroll position of previous path
     if (previousPath.current !== currentPath && contentRef.current) {
       const scrollTop = contentRef.current.scrollTop
       scrollPositions.current[previousPath.current] = scrollTop
     }
-    
+
     // Restore scroll position for current path
     if (contentRef.current) {
       const savedScrollPosition = scrollPositions.current[currentPath]
@@ -129,11 +75,11 @@ export function ContentArea({
         contentRef.current.scrollTop = 0
       }
     }
-    
+
     // Update previous path
     previousPath.current = currentPath
   }, [location.pathname])
-  
+
   // Clear scroll positions when tenant changes
   useEffect(() => {
     scrollPositions.current = {}
@@ -141,7 +87,7 @@ export function ContentArea({
       contentRef.current.scrollTop = 0
     }
   }, [tenantId])
-  
+
   // Wrapped onScanComplete handler that refreshes dashboard metrics
   const handleScanComplete = useCallback(
     async (
@@ -152,25 +98,20 @@ export function ContentArea({
     ) => {
       // Call the original handler
       originalOnScanComplete(findings, stats, tenantId, snapshotKey)
-      
+
       // Refresh dashboard metrics after scan completion
       // Use a small delay to ensure backend has processed the scan
       setTimeout(() => {
-        fetchMetrics(true)
+        refreshMetrics(tenantId)
       }, 1000)
     },
-    [originalOnScanComplete, fetchMetrics]
+    [originalOnScanComplete, refreshMetrics]
   )
-  
-  // Refresh handler that forces a refresh
-  const handleRefresh = async () => {
-    await fetchMetrics(true)
-  }
 
   // Determine which section to render based on current route
   const renderSection = () => {
     const path = location.pathname
-    
+
     switch (path) {
       case ROUTES.DASHBOARD.OVERVIEW_METRICS:
         return (
@@ -180,7 +121,7 @@ export function ContentArea({
             loading={metricsLoading}
             error={metricsError}
             lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
+            onRefresh={refreshMetrics}
           />
         )
       case ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION:
@@ -191,7 +132,7 @@ export function ContentArea({
             loading={metricsLoading}
             error={metricsError}
             lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
+            onRefresh={refreshMetrics}
           />
         )
       case ROUTES.DASHBOARD.TOP_FAILING_RULES:
@@ -202,7 +143,7 @@ export function ContentArea({
             loading={metricsLoading}
             error={metricsError}
             lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
+            onRefresh={refreshMetrics}
           />
         )
       case ROUTES.DASHBOARD.FINDINGS_TIMELINE:
@@ -213,7 +154,7 @@ export function ContentArea({
             loading={metricsLoading}
             error={metricsError}
             lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
+            onRefresh={refreshMetrics}
           />
         )
       case ROUTES.FINDINGS:
@@ -222,10 +163,6 @@ export function ContentArea({
             findings={findings}
             tenantId={tenantId}
             loading={loading}
-            severityFilter={severityFilter}
-            resourceTypeFilter={resourceTypeFilter}
-            onSeverityFilterChange={onSeverityFilterChange}
-            onResourceTypeFilterChange={onResourceTypeFilterChange}
           />
         )
       default:
@@ -238,8 +175,10 @@ export function ContentArea({
       {/* Persistent HorizontalScanBar across all sections */}
       <HorizontalScanBar
         onScanComplete={handleScanComplete}
+        onScanError={onScanError}
         onLoadingChange={onLoadingChange}
         currentTenantId={tenantId}
+        onReset={onReset}
       />
 
       {/* Route-based section rendering with scroll container */}
@@ -249,3 +188,4 @@ export function ContentArea({
     </>
   )
 }
+
