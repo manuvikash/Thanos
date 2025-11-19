@@ -16,6 +16,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination'
+import FindingDetailsSheet from './FindingDetailsSheet'
 
 interface FindingsDataTableProps {
   findings: Finding[]
@@ -24,7 +25,7 @@ interface FindingsDataTableProps {
   itemsPerPage?: number
 }
 
-type SortColumn = 'severity' | 'resource_type' | 'rule_id' | 'resource_arn' | 'message' | 'region'
+type SortColumn = 'severity' | 'resource_type' | 'rule_id' | 'resource_arn' | 'message' | 'region' | 'category'
 type SortDirection = 'asc' | 'desc' | null
 
 // Utility function to extract AWS resource type from ARN
@@ -44,13 +45,29 @@ function truncate(str: string, maxLen: number = 40): string {
   return str.substring(0, maxLen) + '...'
 }
 
+// Utility function to render category badge
+function getCategoryBadge(category?: string) {
+  switch (category) {
+    case 'compliance':
+      return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">Compliance</Badge>
+    case 'type-golden':
+      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Golden Config</Badge>
+    case 'instance-golden':
+      return <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">Critical Golden Config</Badge>
+    default:
+      return <Badge variant="outline">Compliance</Badge>
+  }
+}
+
 export function FindingsDataTable({ findings, totalCount, loading = false, itemsPerPage = 20 }: FindingsDataTableProps) {
+  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [severityFilter, setSeverityFilter] = useState<string[]>([])
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('all')
   const [regionFilter, setRegionFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   // Extract unique resource types from findings
   const availableResourceTypes = useMemo(() => {
@@ -72,6 +89,16 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
     return Array.from(regions).sort()
   }, [findings])
 
+  // Extract unique categories from findings
+  const availableCategories = useMemo(() => {
+    const categories = new Set<string>()
+    findings.forEach((finding) => {
+      const category = finding.category || 'compliance'
+      categories.add(category)
+    })
+    return Array.from(categories).sort()
+  }, [findings])
+
   // Apply filters to findings
   const filteredFindings = useMemo(() => {
     return findings.filter((finding) => {
@@ -90,6 +117,14 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
         return false
       }
 
+      // Category filter
+      if (categoryFilter && categoryFilter !== 'all') {
+        const findingCategory = finding.category || 'compliance'
+        if (findingCategory !== categoryFilter) {
+          return false
+        }
+      }
+
       return true
     })
   }, [findings, severityFilter, resourceTypeFilter, regionFilter])
@@ -99,13 +134,14 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
     setSeverityFilter([])
     setResourceTypeFilter('all')
     setRegionFilter('all')
+    setCategoryFilter('all')
     setCurrentPage(1)
   }
 
   // Reset to page 1 when findings or filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [findings, severityFilter, resourceTypeFilter, regionFilter])
+  }, [findings, severityFilter, resourceTypeFilter, regionFilter, categoryFilter])
 
   // Handle column header click for sorting
   const handleSort = (column: SortColumn) => {
@@ -157,6 +193,10 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
       case 'region':
         aValue = a.region
         bValue = b.region
+        break
+      case 'category':
+        aValue = a.category || 'compliance'
+        bValue = b.category || 'compliance'
         break
       default:
         return 0
@@ -271,11 +311,14 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
           severityFilter={severityFilter}
           resourceTypeFilter={resourceTypeFilter}
           regionFilter={regionFilter}
+          categoryFilter={categoryFilter}
           availableResourceTypes={availableResourceTypes}
           availableRegions={availableRegions}
+          availableCategories={availableCategories}
           onSeverityChange={setSeverityFilter}
           onResourceTypeChange={setResourceTypeFilter}
           onRegionChange={setRegionFilter}
+          onCategoryChange={setCategoryFilter}
           onClearFilters={handleClearFilters}
         />
 
@@ -300,6 +343,18 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
                   >
                     Severity
                     <SortIndicator column="severity" />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort('category')}
+                    className={cn(
+                      'flex items-center hover:text-foreground transition-colors',
+                      sortColumn === 'category' && 'text-foreground'
+                    )}
+                  >
+                    Category
+                    <SortIndicator column="category" />
                   </button>
                 </TableHead>
                 <TableHead>
@@ -366,9 +421,16 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
             </TableHeader>
             <TableBody>
               {paginatedFindings.map((finding) => (
-                <TableRow key={finding.finding_id}>
+                <TableRow 
+                  key={finding.finding_id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setSelectedFinding(finding)}
+                >
                   <TableCell>
                     <SeverityBadge severity={finding.severity} />
+                  </TableCell>
+                  <TableCell>
+                    {getCategoryBadge(finding.category)}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
@@ -443,6 +505,11 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
           </>
         )}
       </CardContent>
+      <FindingDetailsSheet 
+        isOpen={!!selectedFinding} 
+        onClose={() => setSelectedFinding(null)} 
+        finding={selectedFinding} 
+      />
     </Card>
   )
 }

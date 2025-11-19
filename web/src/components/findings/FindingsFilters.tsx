@@ -9,11 +9,14 @@ interface FindingsFiltersProps {
   severityFilter: string[]
   resourceTypeFilter: string
   regionFilter: string
+  categoryFilter: string
   availableResourceTypes: string[]
   availableRegions: string[]
+  availableCategories: string[]
   onSeverityChange: (severities: string[]) => void
   onResourceTypeChange: (type: string) => void
   onRegionChange: (region: string) => void
+  onCategoryChange: (category: string) => void
   onClearFilters: () => void
 }
 
@@ -23,11 +26,14 @@ export function FindingsFilters({
   severityFilter,
   resourceTypeFilter,
   regionFilter,
+  categoryFilter,
   availableResourceTypes,
   availableRegions,
+  availableCategories,
   onSeverityChange,
   onResourceTypeChange,
   onRegionChange,
+  onCategoryChange,
   onClearFilters,
 }: FindingsFiltersProps) {
   const handleSeverityToggle = (severity: string) => {
@@ -38,7 +44,7 @@ export function FindingsFilters({
     }
   }
 
-  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0) + (regionFilter && regionFilter !== 'all' ? 1 : 0)
+  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0) + (regionFilter && regionFilter !== 'all' ? 1 : 0) + (categoryFilter && categoryFilter !== 'all' ? 1 : 0)
   const hasActiveFilters = activeFilterCount > 0
 
   return (
@@ -100,6 +106,26 @@ export function FindingsFilters({
               {availableRegions.map((region) => (
                 <SelectItem key={region} value={region}>
                   {region}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="category-select" className="text-sm font-medium">
+            Category
+          </Label>
+          <Select value={categoryFilter} onValueChange={onCategoryChange}>
+            <SelectTrigger id="category-select" className="w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {availableCategories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category === 'compliance' ? 'Compliance' : category === 'type-golden' ? 'Golden Config' : 'Critical Golden Config'}
                 </SelectItem>
               ))}
             </SelectContent>

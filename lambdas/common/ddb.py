@@ -49,7 +49,7 @@ def put_findings(table_name: str, findings: List[Finding]) -> None:
     if not findings:
         return
     
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
     table = dynamodb.Table(table_name)
     
     # Batch write in chunks of 25 (DynamoDB limit)
@@ -89,7 +89,7 @@ def query_findings(
     Returns:
         Dict with 'items' and optional 'last_evaluated_key'
     """
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
     table = dynamodb.Table(table_name)
     
     query_params = {
@@ -130,7 +130,7 @@ def query_all_findings(table_name: str, tenant_id: str) -> List[Dict[str, Any]]:
     Returns:
         List of all findings for the tenant
     """
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
     table = dynamodb.Table(table_name)
     
     all_items = []
