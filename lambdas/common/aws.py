@@ -61,3 +61,31 @@ def get_regional_client(service: str, region: str, credentials: Dict[str, str]) 
         aws_secret_access_key=credentials["aws_secret_access_key"],
         aws_session_token=credentials["aws_session_token"],
     )
+
+
+def get_enabled_regions(credentials: Dict[str, str]) -> list[str]:
+    """
+    Get list of all enabled regions for the account.
+    
+    Args:
+        credentials: AWS credentials from assume_role
+        
+    Returns:
+        List of region names
+    """
+    try:
+        # Use us-east-1 as a safe default for listing regions
+        ec2 = boto3.client(
+            "ec2",
+            region_name="us-east-1",
+            aws_access_key_id=credentials["aws_access_key_id"],
+            aws_secret_access_key=credentials["aws_secret_access_key"],
+            aws_session_token=credentials["aws_session_token"],
+        )
+        
+        response = ec2.describe_regions(AllRegions=False)
+        return [r["RegionName"] for r in response["Regions"]]
+    except ClientError as e:
+        logger.error(f"Failed to list regions: {e}")
+        # Fallback to us-east-1 if listing fails
+        return ["us-east-1"]

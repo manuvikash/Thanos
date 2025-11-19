@@ -1,5 +1,6 @@
 # DynamoDB table for findings
 resource "aws_dynamodb_table" "findings" {
+  provider     = aws.us_west_1
   name         = "${local.name_prefix}-findings"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "tenant_id"

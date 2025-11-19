@@ -54,6 +54,19 @@ export interface Customer {
   status: string;
 }
 
+export interface CustomerRegistration {
+  tenant_id: string;
+  customer_name: string;
+  role_arn: string;
+  account_id: string;
+  regions: string[];
+}
+
+export interface CustomerResponse {
+  message: string;
+  customer: Customer;
+}
+
 export interface ResourceDetail {
   arn: string;
   resource_type: string;
@@ -166,6 +179,31 @@ export async function getCustomers(): Promise<Customer[]> {
     console.error('Failed to fetch customers:', error);
     throw error;
   }
+}
+
+export async function registerCustomer(
+  registration: CustomerRegistration
+): Promise<CustomerResponse> {
+  const response = await fetch(`${API_URL}/customers/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+    body: JSON.stringify(registration),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+    if (response.status === 409) {
+      throw new Error(error.error || 'Customer with this Tenant ID already exists');
+    }
+
+    throw new Error(error.error || `HTTP ${response.status}: Registration failed`);
+  }
+
+  return response.json();
 }
 
 export async function getResources(

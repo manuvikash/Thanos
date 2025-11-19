@@ -17,6 +17,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "aws" {
+  alias  = "us_west_1"
+  region = "us-west-1"
+}
+
 # Random suffix for unique resource names
 resource "random_id" "suffix" {
   byte_length = 4

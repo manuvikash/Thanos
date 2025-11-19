@@ -50,6 +50,7 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
   const [currentPage, setCurrentPage] = useState(1)
   const [severityFilter, setSeverityFilter] = useState<string[]>([])
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('all')
+  const [regionFilter, setRegionFilter] = useState<string>('all')
 
   // Extract unique resource types from findings
   const availableResourceTypes = useMemo(() => {
@@ -58,6 +59,17 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
       types.add(extractResourceType(finding.resource_arn))
     })
     return Array.from(types).sort()
+  }, [findings])
+
+  // Extract unique regions from findings
+  const availableRegions = useMemo(() => {
+    const regions = new Set<string>()
+    findings.forEach((finding) => {
+      if (finding.region) {
+        regions.add(finding.region)
+      }
+    })
+    return Array.from(regions).sort()
   }, [findings])
 
   // Apply filters to findings
@@ -73,21 +85,27 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
         return false
       }
 
+      // Region filter
+      if (regionFilter && regionFilter !== 'all' && finding.region !== regionFilter) {
+        return false
+      }
+
       return true
     })
-  }, [findings, severityFilter, resourceTypeFilter])
+  }, [findings, severityFilter, resourceTypeFilter, regionFilter])
 
   // Clear all filters
   const handleClearFilters = () => {
     setSeverityFilter([])
     setResourceTypeFilter('all')
+    setRegionFilter('all')
     setCurrentPage(1)
   }
 
   // Reset to page 1 when findings or filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [findings, severityFilter, resourceTypeFilter])
+  }, [findings, severityFilter, resourceTypeFilter, regionFilter])
 
   // Handle column header click for sorting
   const handleSort = (column: SortColumn) => {
@@ -252,9 +270,12 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
         <FindingsFilters
           severityFilter={severityFilter}
           resourceTypeFilter={resourceTypeFilter}
+          regionFilter={regionFilter}
           availableResourceTypes={availableResourceTypes}
+          availableRegions={availableRegions}
           onSeverityChange={setSeverityFilter}
           onResourceTypeChange={setResourceTypeFilter}
+          onRegionChange={setRegionFilter}
           onClearFilters={handleClearFilters}
         />
 

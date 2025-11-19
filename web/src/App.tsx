@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { Header } from './components/Header'
 import ResourcesModal from './components/ResourcesModal'
 import { AppLayout } from './components/layout/AppLayout'
@@ -13,6 +13,8 @@ import { useToast } from './hooks/useToast'
 import { Finding } from './api'
 import { ROUTES } from './routes'
 import { SidebarInset } from './components/ui/sidebar'
+import RegistrationPage from './pages/RegistrationPage'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   const { showToast } = useToast()
@@ -63,100 +65,110 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <AppLayout>
-          <AppSidebar />
+        <Routes>
+          {/* Landing Page - Standalone Layout */}
+          <Route path={ROUTES.ROOT} element={<LandingPage />} />
 
-          <SidebarInset className="relative">
-            {/* Background decorative sphere - theme-aware */}
-            <BackgroundSphere />
+          {/* Registration Route - Standalone Layout */}
+          <Route path={ROUTES.REGISTER} element={<RegistrationPage />} />
 
-            <Header />
+          {/* Dashboard Routes - App Layout */}
+          <Route
+            element={
+              <AppLayout>
+                <AppSidebar />
 
-            <main className="relative z-10">
-              <Routes>
-                {/* Root redirect to default dashboard section */}
-                <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.DASHBOARD.OVERVIEW_METRICS} replace />} />
+                <SidebarInset className="relative">
+                  {/* Background decorative sphere - theme-aware */}
+                  <BackgroundSphere />
 
-                {/* Dashboard section routes */}
-                <Route
-                  path={ROUTES.DASHBOARD.OVERVIEW_METRICS}
-                  element={
-                    <ContentArea
-                      tenantId={tenantId}
-                      findings={findings}
-                      loading={loading}
-                      onScanComplete={handleScanComplete}
-                      onScanError={handleScanError}
-                      onLoadingChange={setLoading}
-                      onReset={handleReset}
-                    />
-                  }
+                  <Header />
+
+                  <main className="relative z-10">
+                    <Outlet />
+                  </main>
+                </SidebarInset>
+              </AppLayout>
+            }
+          >
+            {/* Dashboard section routes */}
+            <Route
+              path={ROUTES.DASHBOARD.OVERVIEW_METRICS}
+              element={
+                <ContentArea
+                  tenantId={tenantId}
+                  findings={findings}
+                  loading={loading}
+                  onScanComplete={handleScanComplete}
+                  onScanError={handleScanError}
+                  onLoadingChange={setLoading}
+                  onReset={handleReset}
                 />
-                <Route
-                  path={ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION}
-                  element={
-                    <ContentArea
-                      tenantId={tenantId}
-                      findings={findings}
-                      loading={loading}
-                      onScanComplete={handleScanComplete}
-                      onScanError={handleScanError}
-                      onLoadingChange={setLoading}
-                      onReset={handleReset}
-                    />
-                  }
+              }
+            />
+            <Route
+              path={ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION}
+              element={
+                <ContentArea
+                  tenantId={tenantId}
+                  findings={findings}
+                  loading={loading}
+                  onScanComplete={handleScanComplete}
+                  onScanError={handleScanError}
+                  onLoadingChange={setLoading}
+                  onReset={handleReset}
                 />
-                <Route
-                  path={ROUTES.DASHBOARD.TOP_FAILING_RULES}
-                  element={
-                    <ContentArea
-                      tenantId={tenantId}
-                      findings={findings}
-                      loading={loading}
-                      onScanComplete={handleScanComplete}
-                      onScanError={handleScanError}
-                      onLoadingChange={setLoading}
-                      onReset={handleReset}
-                    />
-                  }
+              }
+            />
+            <Route
+              path={ROUTES.DASHBOARD.TOP_FAILING_RULES}
+              element={
+                <ContentArea
+                  tenantId={tenantId}
+                  findings={findings}
+                  loading={loading}
+                  onScanComplete={handleScanComplete}
+                  onScanError={handleScanError}
+                  onLoadingChange={setLoading}
+                  onReset={handleReset}
                 />
-                <Route
-                  path={ROUTES.DASHBOARD.FINDINGS_TIMELINE}
-                  element={
-                    <ContentArea
-                      tenantId={tenantId}
-                      findings={findings}
-                      loading={loading}
-                      onScanComplete={handleScanComplete}
-                      onScanError={handleScanError}
-                      onLoadingChange={setLoading}
-                      onReset={handleReset}
-                    />
-                  }
+              }
+            />
+            <Route
+              path={ROUTES.DASHBOARD.FINDINGS_TIMELINE}
+              element={
+                <ContentArea
+                  tenantId={tenantId}
+                  findings={findings}
+                  loading={loading}
+                  onScanComplete={handleScanComplete}
+                  onScanError={handleScanError}
+                  onLoadingChange={setLoading}
+                  onReset={handleReset}
                 />
+              }
+            />
 
-                {/* Findings Table route */}
-                <Route
-                  path={ROUTES.FINDINGS}
-                  element={
-                    <ContentArea
-                      tenantId={tenantId}
-                      findings={findings}
-                      loading={loading}
-                      onScanComplete={handleScanComplete}
-                      onScanError={handleScanError}
-                      onLoadingChange={setLoading}
-                      onReset={handleReset}
-                    />
-                  }
+            {/* Findings Table route */}
+            <Route
+              path={ROUTES.FINDINGS}
+              element={
+                <ContentArea
+                  tenantId={tenantId}
+                  findings={findings}
+                  loading={loading}
+                  onScanComplete={handleScanComplete}
+                  onScanError={handleScanError}
+                  onLoadingChange={setLoading}
+                  onReset={handleReset}
                 />
+              }
+            />
 
-                {/* Catch-all route for invalid paths - redirect to default with toast notification */}
-                <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />
-              </Routes>
-            </main>
-          </SidebarInset>
-        </AppLayout>
+            {/* Catch-all route for invalid paths - redirect to default with toast notification */}
+            <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />
+          </Route>
+        </Routes>
 
         {/* Resources Modal */}
         <ResourcesModal

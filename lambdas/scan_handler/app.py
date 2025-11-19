@@ -12,7 +12,7 @@ from typing import Any, Dict
 # Add common to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from common.aws import assume_role
+from common.aws import assume_role, get_enabled_regions
 from common.normalize import collect_resources
 from common.s3io import write_snapshot, load_rules
 from common.eval import evaluate_resources
@@ -119,6 +119,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Step 1: Assume role
         logger.info(f"Assuming role: {role_arn}")
         credentials = assume_role(role_arn)
+
+        # Handle "ALL" regions
+        if regions == ["ALL"]:
+            logger.info("Fetching all enabled regions for account")
+            regions = get_enabled_regions(credentials)
         
         # Step 2: Collect resources
         logger.info(f"Collecting resources from {len(regions)} region(s)")

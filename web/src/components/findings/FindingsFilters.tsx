@@ -8,9 +8,12 @@ import { X } from 'lucide-react'
 interface FindingsFiltersProps {
   severityFilter: string[]
   resourceTypeFilter: string
+  regionFilter: string
   availableResourceTypes: string[]
+  availableRegions: string[]
   onSeverityChange: (severities: string[]) => void
   onResourceTypeChange: (type: string) => void
+  onRegionChange: (region: string) => void
   onClearFilters: () => void
 }
 
@@ -19,9 +22,12 @@ const SEVERITY_OPTIONS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
 export function FindingsFilters({
   severityFilter,
   resourceTypeFilter,
+  regionFilter,
   availableResourceTypes,
+  availableRegions,
   onSeverityChange,
   onResourceTypeChange,
+  onRegionChange,
   onClearFilters,
 }: FindingsFiltersProps) {
   const handleSeverityToggle = (severity: string) => {
@@ -32,7 +38,7 @@ export function FindingsFilters({
     }
   }
 
-  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0)
+  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0) + (regionFilter && regionFilter !== 'all' ? 1 : 0)
   const hasActiveFilters = activeFilterCount > 0
 
   return (
@@ -74,6 +80,26 @@ export function FindingsFilters({
               {availableResourceTypes.map((type) => (
                 <SelectItem key={type} value={type} className="font-mono">
                   {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Region Filter */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="region-select" className="text-sm font-medium">
+            Region
+          </Label>
+          <Select value={regionFilter} onValueChange={onRegionChange}>
+            <SelectTrigger id="region-select" className="w-[200px]">
+              <SelectValue placeholder="All Regions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Regions</SelectItem>
+              {availableRegions.map((region) => (
+                <SelectItem key={region} value={region}>
+                  {region}
                 </SelectItem>
               ))}
             </SelectContent>
