@@ -135,6 +135,10 @@ tf-destroy:
 			python3 -c "import boto3; s3=boto3.resource('s3'); bucket=s3.Bucket('$$bucket_name'); bucket.object_versions.all().delete()" 2>/dev/null || true; \
 		fi; \
 	done
+	@echo "Deleting CloudFormation stacks created by customers (if any)..."
+	@aws cloudformation delete-stack --stack-name CloudGoldenGuardOnboarding 2>/dev/null || true
+	@echo "Removing onboarding Lambda log groups..."
+	@aws logs delete-log-group --log-group-name /aws/lambda/$$(cd infra && terraform output -raw project_prefix 2>/dev/null || echo "cloud-golden-guard")-onboarding 2>/dev/null || true
 	@echo "Running terraform destroy..."
 	cd infra && terraform destroy
 
