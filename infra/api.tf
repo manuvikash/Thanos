@@ -144,15 +144,15 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
   }
 }
 
-# resource "aws_apigatewayv2_authorizer" "api_key" {
-#   api_id                            = aws_apigatewayv2_api.main.id
-#   authorizer_type                   = "REQUEST"
-#   authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
-#   identity_sources                  = ["$request.header.x-api-key"]
-#   name                              = "api-key-authorizer"
-#   authorizer_payload_format_version = "2.0"
-#   enable_simple_responses           = true
-# }
+resource "aws_apigatewayv2_authorizer" "api_key" {
+  api_id                            = aws_apigatewayv2_api.main.id
+  authorizer_type                   = "REQUEST"
+  authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
+  identity_sources                  = ["$request.header.x-api-key"]
+  name                              = "api-key-authorizer"
+  authorizer_payload_format_version = "2.0"
+  enable_simple_responses           = true
+}
 
 resource "aws_lambda_permission" "authorizer" {
   statement_id  = "AllowAPIGatewayInvoke"

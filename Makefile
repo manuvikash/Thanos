@@ -54,7 +54,7 @@ package-lambdas:
 	@mkdir -p dist/scan_handler_build
 	@cp -r lambdas/common dist/scan_handler_build/
 	@cp -r lambdas/scan_handler/*.py dist/scan_handler_build/
-	@cp -r rules dist/scan_handler_build/
+	@# cp -r rules dist/scan_handler_build/  # Rules directory not present
 	@pip3 install -r lambdas/scan_handler/requirements.txt -t dist/scan_handler_build/ --quiet
 	@cd dist/scan_handler_build && zip -r ../scan_handler.zip . -q
 	@rm -rf dist/scan_handler_build
