@@ -1,5 +1,5 @@
-import { FormEvent } from 'react'
-import { Finding } from '../api'
+import { FormEvent, useEffect } from 'react'
+import { Finding, Customer } from '../api'
 import { Spinner } from './ui/spinner'
 import { useScanLogic, ScanMode } from '../hooks/useScanLogic'
 
@@ -16,6 +16,7 @@ interface HorizontalScanBarProps {
   onLoadingChange: (loading: boolean) => void
   currentTenantId?: string
   onReset: () => void
+  onCustomerChange?: (customer: Customer | null) => void
 }
 
 export default function HorizontalScanBar({
@@ -24,9 +25,11 @@ export default function HorizontalScanBar({
   onLoadingChange,
   currentTenantId,
   onReset,
+  onCustomerChange,
 }: HorizontalScanBarProps) {
   const {
     customers,
+    selectedCustomer,
     tenantId,
     scanMode,
     selectedRegion,
@@ -46,6 +49,13 @@ export default function HorizontalScanBar({
     onLoadingChange,
     currentTenantId,
   })
+
+  // Notify parent when customer selection changes
+  useEffect(() => {
+    if (onCustomerChange) {
+      onCustomerChange(selectedCustomer)
+    }
+  }, [selectedCustomer, onCustomerChange])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

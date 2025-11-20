@@ -6,7 +6,7 @@ import { SeverityDistributionSection } from './SeverityDistributionSection'
 import { TopFailingRulesSection } from './TopFailingRulesSection'
 import { FindingsTimelineSection } from './FindingsTimelineSection'
 import { FindingsTableSection } from './FindingsTableSection'
-import { Finding } from '../api'
+import { Finding, Customer } from '../api'
 import { ROUTES } from '../routes'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { ScanMode } from '../hooks/useScanLogic'
@@ -38,6 +38,7 @@ export function ContentArea({
   const location = useLocation()
   const [lastScanMode, setLastScanMode] = useState<ScanMode | null>(null)
   const [lastScanTarget, setLastScanTarget] = useState<string | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
 
   // Use custom hook for dashboard metrics
   const {
@@ -176,6 +177,8 @@ export function ContentArea({
             findings={findings}
             tenantId={tenantId}
             loading={loading}
+            selectedCustomer={selectedCustomer}
+            scanMode={lastScanMode || 'customer'}
           />
         )
       default:
@@ -192,6 +195,7 @@ export function ContentArea({
         onLoadingChange={onLoadingChange}
         currentTenantId={tenantId}
         onReset={onReset}
+        onCustomerChange={setSelectedCustomer}
       />
 
       {/* Region Scan Info Banner */}

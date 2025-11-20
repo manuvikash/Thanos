@@ -37,39 +37,18 @@ export default function ConnectAws() {
         console.error('QuickCreate error', r.status, j);
         return;
       }
-      // Attempt to open the target account console for the user.
-      // Best-effort approach:
-      // 1) Open an AWS "Switch Role" link that points to the target account and the onboarding role name.
-      // 2) Open the CloudFormation quick-create URL (template URL + region) in a second tab.
-      // The user should complete the switch-role action (if prompted) and then proceed to create the stack.
-
-      const roleName = import.meta.env.VITE_ONBOARDING_ROLE_NAME || 'CloudGoldenGuardAuditRole'
-      const cfUrl = j.quickCreateUrl || j.templateUrl || ''
-      const regionParam = region || 'us-east-1'
-
-      // CloudFormation create stack URL (console path). Use the returned quickCreateUrl if available,
-      // otherwise build it from the template URL.
-      const cloudformationUrl = cfUrl
-        ? cfUrl
-        : `https://console.aws.amazon.com/cloudformation/home?region=${encodeURIComponent(regionParam)}#/stacks/new`;
-
-      // Switch role URL - opens the console UI to switch to the target account/role. Include redirect to CF URL if possible.
-      let switchRoleUrl = `https://signin.aws.amazon.com/switchrole?account=${encodeURIComponent(accountId)}&roleName=${encodeURIComponent(roleName)}&displayName=Thanos`;
-      try {
-        // Some consoles support redirect_uri - include it as best effort so the user lands on CF page after switching.
-        if (cloudformationUrl) {
-          switchRoleUrl += `&redirect_uri=${encodeURIComponent(cloudformationUrl)}`;
-        }
-      } catch (e) {
-        // ignore encoding issues
+      
+      // Open the CloudFormation quick-create URL directly in the target account
+      const quickCreateUrl = j.quickCreateUrl;
+      if (!quickCreateUrl) {
+        setMsg("Error: No quick-create URL returned from API");
+        return;
       }
 
-      // Open switch-role first (prompts user to assume role in target account), then open CloudFormation page.
-      window.open(switchRoleUrl, '_blank', 'noopener');
-      // Open CF page in a new tab as well - user may need to complete switch-role first.
-      window.open(cloudformationUrl, '_blank', 'noopener');
+      // Open the CloudFormation quick-create page
+      window.open(quickCreateUrl, '_blank', 'noopener');
 
-      setMsg("Opened the target account console tab and CloudFormation template. If prompted, click 'Switch Role' in the first tab, then complete 'Create stack' in the CloudFormation tab. After the stack finishes, click 'I created the role'.");
+      setMsg("Opened CloudFormation console. Please sign in to the target AWS account (if needed), review the template parameters, acknowledge IAM capabilities, and create the stack. After the stack finishes, click 'Verify & Save'.");
     } catch (err: any) {
       setBusy(false);
       console.error('QuickCreate fetch failed', err);

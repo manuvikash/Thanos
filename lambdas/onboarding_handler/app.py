@@ -96,21 +96,20 @@ def verify_and_register(event, _ctx):
                 aws_secret_access_key=assumed_secret_key,
                 aws_session_token=assumed_token,
             )
-            # Try to get the calling principal's user (if available)
+            # Try to get account alias
             try:
-                resp = iam.get_user()
-                customer_name = resp.get("User", {}).get("UserName")
+                resp = iam.list_account_aliases()
+                aliases = resp.get("AccountAliases", [])
+                if aliases:
+                    customer_name = aliases[0]
             except Exception:
-                # Not an IAM user (likely an assumed role). Fall back to account alias.
-                try:
-                    resp = iam.list_account_aliases()
-                    aliases = resp.get("AccountAliases", [])
-                    if aliases:
-                        customer_name = aliases[0]
-                except Exception:
-                    customer_name = None
+                pass
     except Exception:
-        customer_name = None
+        pass
+    
+    # Fallback to account ID if no alias found
+    if not customer_name:
+        customer_name = f"AWS-{account_id}"
 
     # Upsert logic: check if account already exists for this tenant
     now = datetime.datetime.utcnow().isoformat() + "Z"
@@ -124,16 +123,19 @@ def verify_and_register(event, _ctx):
         merged_regions = list(existing_regions.union(new_regions))
         # Prefer discovered name, fallback to provided, else keep existing
         name = customer_name or body.get("customerName", "") or existing.get("customer_name", "")
+        # Set connectedAt if not already set
+        connected_at = existing.get("connectedAt") or now
         # Update item
         table.update_item(
             Key=key,
-            UpdateExpression="SET regions = :r, customer_name = :n, role_arn = :a, status = :s, updated_at = :u",
+            UpdateExpression="SET regions = :r, customer_name = :n, role_arn = :a, status = :s, updated_at = :u, connectedAt = :c",
             ExpressionAttributeValues={
                 ":r": merged_regions,
                 ":n": name,
                 ":a": role_arn,
                 ":s": "active",
                 ":u": now,
+                ":c": connected_at,
             }
         )
         # Compose response item
@@ -144,13 +146,14 @@ def verify_and_register(event, _ctx):
             "role_arn": role_arn,
             "status": "active",
             "updated_at": now,
+            "connectedAt": connected_at,
         })
     else:
         # New item
         item = {
             "tenant_id": "Thanos-dev",
             "account_id": account_id,
-            "connectedAt": "",
+            "connectedAt": now,
             "created_at": now,
             "customer_name": customer_name or body.get("customerName", ""),
             "regions": selected_regions,
