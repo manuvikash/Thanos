@@ -38,17 +38,19 @@ export default function ConnectAws() {
         return;
       }
       
-      // Open the CloudFormation quick-create URL directly in the target account
-      const quickCreateUrl = j.quickCreateUrl;
-      if (!quickCreateUrl) {
-        setMsg("Error: No quick-create URL returned from API");
+      // Open AWS sign-in page that redirects to CloudFormation
+      const signInUrl = j.signInUrl;
+      const targetAccountId = j.accountId;
+      
+      if (!signInUrl) {
+        setMsg("Error: No sign-in URL returned from API");
         return;
       }
 
-      // Open the CloudFormation quick-create page
-      window.open(quickCreateUrl, '_blank', 'noopener');
+      // Open sign-in page - user will be logged out and prompted to sign in to target account
+      window.open(signInUrl, '_blank', 'noopener');
 
-      setMsg("Opened CloudFormation console. Please sign in to the target AWS account (if needed), review the template parameters, acknowledge IAM capabilities, and create the stack. After the stack finishes, click 'Verify & Save'.");
+      setMsg(`Opening AWS sign-in. Please sign in to AWS account ${targetAccountId}, then you'll be redirected to CloudFormation. Review the template, acknowledge IAM capabilities, and create the stack. After completion, click 'Verify & Save'.`);
     } catch (err: any) {
       setBusy(false);
       console.error('QuickCreate fetch failed', err);

@@ -1,11 +1,12 @@
 import { Inbox } from 'lucide-react'
-import { DashboardMetrics } from '../api'
+import { DashboardMetrics, Customer } from '../api'
 import { SectionHeader } from './SectionHeader'
 import { DashboardMetrics as DashboardMetricsWidget } from './DashboardMetrics'
 import { EmptyState } from './shared/EmptyState'
 import { ErrorAlert } from './shared/ErrorAlert'
 import { OverviewMetricsSkeleton } from './LoadingSkeleton'
 import { RegionalMetricsGrid } from './RegionalMetricsGrid'
+import { CustomerRegionalMetrics } from './CustomerRegionalMetrics'
 import { useRegionalMetrics } from '../hooks/useRegionalMetrics'
 import { ScanMode } from '../hooks/useScanLogic'
 
@@ -18,6 +19,8 @@ interface OverviewMetricsSectionProps {
   onRefresh: () => void
   scanMode?: ScanMode
   scanTarget?: string
+  selectedCustomer?: Customer | null
+  regionalRefreshKey?: number
 }
 
 export function OverviewMetricsSection({
@@ -29,20 +32,33 @@ export function OverviewMetricsSection({
   onRefresh,
   scanMode = 'customer',
   scanTarget,
+  selectedCustomer,
+  regionalRefreshKey = 0,
 }: OverviewMetricsSectionProps) {
   const isRegionMode = scanMode === 'region' && !!scanTarget
+  const isCustomerMode = scanMode === 'customer' && selectedCustomer
   const {
     metricsState,
     loading: regionalLoading,
     error: regionalError,
     lastUpdated: regionalLastUpdated,
     refreshMetrics: refreshRegionalMetrics,
-  } = useRegionalMetrics({ region: scanTarget || '', enabled: isRegionMode })
+  } = useRegionalMetrics({ 
+    region: scanTarget || '', 
+    enabled: isRegionMode,
+    refreshKey: regionalRefreshKey,
+  })
 
   return (
     <div className="p-6">
       <SectionHeader
-        title={isRegionMode ? `Regional Metrics - ${scanTarget}` : 'Overview Metrics'}
+        title={
+          isRegionMode 
+            ? `Regional Metrics - ${scanTarget}` 
+            : isCustomerMode
+              ? `Overview Metrics - ${selectedCustomer?.customer_name}`
+              : 'Overview Metrics'
+        }
         lastUpdated={isRegionMode ? regionalLastUpdated : lastUpdated}
         onRefresh={isRegionMode ? refreshRegionalMetrics : onRefresh}
         loading={isRegionMode ? regionalLoading : Boolean(loading)}
@@ -55,6 +71,15 @@ export function OverviewMetricsSection({
             metricsState={metricsState}
             loading={regionalLoading}
             error={regionalError}
+          />
+        </div>
+      ) : isCustomerMode ? (
+        // Customer mode: show per-region breakdown for the selected customer
+        <div className="w-full">
+          <CustomerRegionalMetrics
+            customer={selectedCustomer}
+            tenantId={selectedCustomer.tenant_id}
+            onRefresh={onRefresh}
           />
         </div>
       ) : (

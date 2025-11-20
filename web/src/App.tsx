@@ -40,6 +40,7 @@ function App() {
   }
 
   const handleReset = () => {
+    console.log('[App] Resetting all scan data')
     setFindings([])
     setTenantId('')
     setScanStats(null)

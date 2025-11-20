@@ -26,6 +26,7 @@ export function useDashboardMetrics({ tenantId }: UseDashboardMetricsProps) {
             const effectiveTenantId = overrideTenantId || tenantId
 
             if (!effectiveTenantId) {
+                console.log('[useDashboardMetrics] No tenantId - clearing metrics')
                 setMetrics(null)
                 setError(null)
                 setLastUpdated(null)

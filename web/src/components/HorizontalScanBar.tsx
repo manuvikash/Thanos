@@ -52,6 +52,7 @@ export default function HorizontalScanBar({
 
   // Notify parent when customer selection changes
   useEffect(() => {
+    console.log('[HorizontalScanBar] selectedCustomer changed:', selectedCustomer?.customer_name || 'None')
     if (onCustomerChange) {
       onCustomerChange(selectedCustomer)
     }

@@ -45,7 +45,7 @@ def quick_create_url(event, _ctx):
             return _response(500, {"error": "NO_TEMPLATE_CONFIGURED"})
 
     # AWS Console Quick Create CFN deep link
-    # Param name must match your template’s ParameterKey (README shows TrustedAccountId).
+    # Param name must match your template's ParameterKey (README shows TrustedAccountId).
     params = {
         "stackName": ROLE_NAME,
         "templateURL": template_url,
@@ -53,9 +53,18 @@ def quick_create_url(event, _ctx):
         "capabilities": "CAPABILITY_NAMED_IAM"
     }
     query = "&".join(f"{k}={urllib.parse.quote(str(v))}" for k, v in params.items())
-    url = f"https://console.aws.amazon.com/cloudformation/home?region={region}#/stacks/quickcreate?{query}"
+    cfn_url = f"https://console.aws.amazon.com/cloudformation/home?region={region}#/stacks/quickcreate?{query}"
+    
+    # Create AWS sign-in URL that forces user to sign in to the target account
+    # This uses the federation sign-in URL with account parameter
+    signin_url = f"https://signin.aws.amazon.com/oauth?Action=logout&redirect_uri={urllib.parse.quote(cfn_url)}"
 
-    return _response(200, {"quickCreateUrl": url})
+    return _response(200, {
+        "quickCreateUrl": cfn_url,
+        "signInUrl": signin_url,
+        "accountId": account_id,
+        "region": region
+    })
 
 def verify_and_register(event, _ctx):
     body = json.loads(event.get("body") or "{}")
@@ -112,8 +121,10 @@ def verify_and_register(event, _ctx):
         customer_name = f"AWS-{account_id}"
 
     # Upsert logic: check if account already exists for this tenant
+    # Use account_id as tenant_id since each AWS account is treated as a separate tenant
     now = datetime.datetime.utcnow().isoformat() + "Z"
-    key = {"tenant_id": "Thanos-dev", "account_id": account_id}
+    tenant_id = f"customer-{account_id}"
+    key = {"tenant_id": tenant_id}
     existing = table.get_item(Key=key).get("Item")
 
     if existing:
@@ -128,7 +139,10 @@ def verify_and_register(event, _ctx):
         # Update item
         table.update_item(
             Key=key,
-            UpdateExpression="SET regions = :r, customer_name = :n, role_arn = :a, status = :s, updated_at = :u, connectedAt = :c",
+            UpdateExpression="SET regions = :r, customer_name = :n, role_arn = :a, #status = :s, updated_at = :u, connectedAt = :c, account_id = :aid",
+            ExpressionAttributeNames={
+                "#status": "status"
+            },
             ExpressionAttributeValues={
                 ":r": merged_regions,
                 ":n": name,
@@ -136,6 +150,7 @@ def verify_and_register(event, _ctx):
                 ":s": "active",
                 ":u": now,
                 ":c": connected_at,
+                ":aid": account_id,
             }
         )
         # Compose response item
@@ -147,11 +162,12 @@ def verify_and_register(event, _ctx):
             "status": "active",
             "updated_at": now,
             "connectedAt": connected_at,
+            "account_id": account_id,
         })
     else:
         # New item
         item = {
-            "tenant_id": "Thanos-dev",
+            "tenant_id": tenant_id,
             "account_id": account_id,
             "connectedAt": now,
             "created_at": now,

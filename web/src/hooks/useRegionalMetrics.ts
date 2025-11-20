@@ -13,9 +13,10 @@ interface RegionalMetricsState {
 interface UseRegionalMetricsProps {
     region: string
     enabled: boolean
+    refreshKey?: number
 }
 
-export function useRegionalMetrics({ region, enabled }: UseRegionalMetricsProps) {
+export function useRegionalMetrics({ region, enabled, refreshKey = 0 }: UseRegionalMetricsProps) {
     const [metricsState, setMetricsState] = useState<RegionalMetricsState>({})
     const [customers, setCustomers] = useState<Customer[]>([])
     const [loading, setLoading] = useState(false)
@@ -57,12 +58,26 @@ export function useRegionalMetrics({ region, enabled }: UseRegionalMetricsProps)
         try {
             // Fetch all customers
             const customersData = await getCustomers()
-            setCustomers(customersData)
+            
+            // Filter customers that have the selected region configured
+            const customersInRegion = customersData.filter(customer => 
+                customer.regions && customer.regions.includes(region)
+            )
+            
+            setCustomers(customersInRegion)
 
-            // Fetch metrics for each customer
+            // If no customers in this region, return empty state
+            if (customersInRegion.length === 0) {
+                setMetricsState({})
+                setError(`No customers are configured for region ${region}`)
+                setLoading(false)
+                return
+            }
+
+            // Fetch metrics for each customer in this region
             const newState: RegionalMetricsState = {}
 
-            for (const customer of customersData) {
+            for (const customer of customersInRegion) {
                 newState[customer.tenant_id] = {
                     customer,
                     metrics: null,
@@ -74,7 +89,7 @@ export function useRegionalMetrics({ region, enabled }: UseRegionalMetricsProps)
             setMetricsState(newState)
 
             // Fetch metrics in parallel
-            const metricsPromises = customersData.map(async (customer) => {
+            const metricsPromises = customersInRegion.map(async (customer) => {
                 try {
                     const metrics = await getDashboardMetrics(customer.tenant_id)
                     return { tenantId: customer.tenant_id, metrics, error: null }
@@ -117,12 +132,13 @@ export function useRegionalMetrics({ region, enabled }: UseRegionalMetricsProps)
         }
     }, [region, enabled])
 
-    // Fetch metrics when region changes
+    // Fetch metrics when region changes or refreshKey changes
     useEffect(() => {
         if (enabled) {
+            console.log('[useRegionalMetrics] Fetching metrics - region:', region, 'refreshKey:', refreshKey)
             fetchRegionalMetrics()
         }
-    }, [region, enabled, fetchRegionalMetrics])
+    }, [region, enabled, refreshKey, fetchRegionalMetrics])
 
     const refreshMetrics = useCallback(async () => {
         await fetchRegionalMetrics(true)

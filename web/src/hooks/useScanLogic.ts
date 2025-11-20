@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { runScan, Customer, Finding } from '../api'
 
 export type ScanStatus = 'ready' | 'scanning' | 'complete' | 'error'
@@ -44,6 +44,9 @@ export function useScanLogic({
     const [progress, setProgress] = useState(0)
     const [error, setError] = useState<string | null>(null)
     const [loadingCustomers, setLoadingCustomers] = useState(true)
+    
+    // Ref to track the most recent customer change to prevent race conditions
+    const currentCustomerRef = useRef<string | null>(null)
 
     // Load customers on mount
     useEffect(() => {
@@ -62,32 +65,46 @@ export function useScanLogic({
         fetchCustomers()
     }, [])
 
-    // Sync with currentTenantId prop
+    // Only sync from parent on initial mount if currentTenantId is provided
     useEffect(() => {
-        if (currentTenantId && currentTenantId !== tenantId) {
-            setTenantId(currentTenantId)
+        if (currentTenantId && currentTenantId !== tenantId && customers.length > 0) {
             const customer = customers.find((c) => c.tenant_id === currentTenantId)
-            setSelectedCustomer(customer || null)
+            if (customer) {
+                setSelectedCustomer(customer)
+                setTenantId(customer.tenant_id)
+            }
         }
-    }, [currentTenantId, customers, tenantId])
-
-    // Update tenantId when customer is selected
-    useEffect(() => {
-        if (selectedCustomer) {
-            setTenantId(selectedCustomer.tenant_id)
-        }
-    }, [selectedCustomer])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Only run once on mount
 
     const handleCustomerChange = useCallback(
         (selectedTenantId: string) => {
+            console.log('[useScanLogic] handleCustomerChange called with:', selectedTenantId)
+            
+            // Update ref immediately to track the latest selection
+            currentCustomerRef.current = selectedTenantId
+            
+            // Reset scan state first
+            setStatus('ready')
+            setProgress(0)
+            setError(null)
+            
             if (selectedTenantId === '') {
                 setSelectedCustomer(null)
                 setTenantId('')
             } else {
                 const customer = customers.find((c) => c.tenant_id === selectedTenantId)
                 if (customer) {
-                    setSelectedCustomer(customer)
-                    setTenantId(customer.tenant_id)
+                    // Only update if this is still the most recent selection
+                    if (currentCustomerRef.current === selectedTenantId) {
+                        console.log('[useScanLogic] Setting customer:', customer.customer_name)
+                        setSelectedCustomer(customer)
+                        setTenantId(customer.tenant_id)
+                    } else {
+                        console.log('[useScanLogic] Skipping stale customer update:', customer.customer_name)
+                    }
+                } else {
+                    console.warn('[useScanLogic] Customer not found for tenant_id:', selectedTenantId)
                 }
             }
         },
@@ -114,6 +131,11 @@ export function useScanLogic({
                     throw new Error('Please select a valid customer')
                 }
 
+                // Validate customer has regions configured
+                if (!customer.regions || customer.regions.length === 0) {
+                    throw new Error(`Customer ${customer.customer_name} has no regions configured. Please update the customer configuration.`)
+                }
+
                 const response = await runScan({
                     tenant_id: customer.tenant_id,
                     role_arn: customer.role_arn,
@@ -122,11 +144,16 @@ export function useScanLogic({
                     rules_source: 'repo',
                 })
 
+                // Filter findings to only include those from the customer's configured regions
+                const validFindings = response.findings_sample.filter(
+                    (finding) => customer.regions.includes(finding.region)
+                )
+
                 clearInterval(progressInterval)
                 setProgress(100)
                 setStatus('complete')
                 onScanComplete(
-                    response.findings_sample,
+                    validFindings,
                     response.totals,
                     customer.tenant_id,
                     response.snapshot_key,
@@ -139,13 +166,24 @@ export function useScanLogic({
                     throw new Error('Please select a region')
                 }
 
-                // Scan all customers for the selected region
+                // Filter customers that have the selected region configured
+                const customersWithRegion = customers.filter(customer => 
+                    customer.regions && customer.regions.includes(selectedRegion)
+                )
+
+                if (customersWithRegion.length === 0) {
+                    throw new Error(`No customers are configured for region ${selectedRegion}. Please onboard customers with this region first.`)
+                }
+
+                // Scan only customers that have this region
                 let combinedFindings: Finding[] = []
                 let totalResources = 0
                 let totalFindings = 0
                 let latestSnapshotKey = ''
+                let successfulScans = 0
+                let failedScans = 0
 
-                for (const customer of customers) {
+                for (const customer of customersWithRegion) {
                     try {
                         const response = await runScan({
                             tenant_id: customer.tenant_id,
@@ -163,11 +201,17 @@ export function useScanLogic({
                         totalResources += response.totals.resources
                         totalFindings += response.totals.findings
                         latestSnapshotKey = response.snapshot_key
+                        successfulScans++
 
-                        setProgress((prev) => Math.min(prev + (90 / customers.length), 89))
+                        setProgress((prev) => Math.min(prev + (90 / customersWithRegion.length), 89))
                     } catch (customerErr) {
-                        console.warn(`Failed to scan customer ${customer.customer_name}:`, customerErr)
+                        failedScans++
+                        console.error(`Failed to scan customer ${customer.customer_name} (${customer.account_id}):`, customerErr)
                     }
+                }
+
+                if (successfulScans === 0) {
+                    throw new Error(`Failed to scan all ${customersWithRegion.length} customer(s) in ${selectedRegion}. Please verify the IAM roles are properly configured.`)
                 }
 
                 clearInterval(progressInterval)

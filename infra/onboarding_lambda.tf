@@ -15,14 +15,16 @@ data "aws_iam_policy_document" "lambda_assume" {
   }
 }
 
-# Allow lambda to write to DynamoDB table and call sts:AssumeRole
+# Allow lambda to write to DynamoDB table, read S3 CFN template, and call sts:AssumeRole
 resource "aws_iam_role_policy" "onboarding_inline" {
   role = aws_iam_role.onboarding_lambda_role.id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
-      { Effect = "Allow", Action = ["dynamodb:PutItem"], Resource = aws_dynamodb_table.customers.arn },
+      { Effect = "Allow", Action = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem"], Resource = aws_dynamodb_table.customers.arn },
       { Effect = "Allow", Action = ["sts:AssumeRole"], Resource = "arn:aws:iam::*:role/CloudGoldenGuardAuditRole" },
+      { Effect = "Allow", Action = ["s3:GetObject"], Resource = "${aws_s3_bucket.cfn_artifacts.arn}/*" },
+      { Effect = "Allow", Action = ["iam:ListAccountAliases"], Resource = "*" },
       { Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"], Resource = "*" }
     ]
   })

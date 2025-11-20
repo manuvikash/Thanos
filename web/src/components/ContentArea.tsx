@@ -39,15 +39,33 @@ export function ContentArea({
   const [lastScanMode, setLastScanMode] = useState<ScanMode | null>(null)
   const [lastScanTarget, setLastScanTarget] = useState<string | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [regionalRefreshKey, setRegionalRefreshKey] = useState(0)
 
-  // Use custom hook for dashboard metrics
+  // Handler that clears findings when customer changes
+  const handleCustomerChange = useCallback(
+    (customer: Customer | null) => {
+      console.log('[ContentArea] Customer changed:', customer?.customer_name || 'None')
+      
+      // Clear stale findings and metrics BEFORE setting new customer
+      onReset()
+      setLastScanMode(null)
+      setLastScanTarget(null)
+      
+      // Then update the selected customer
+      setSelectedCustomer(customer)
+    },
+    [onReset]
+  )
+
+  // Use custom hook for dashboard metrics (only in customer mode)
+  // In region mode, tenantId will be empty, so we skip this
   const {
     metrics,
     loading: metricsLoading,
     error: metricsError,
     lastUpdated,
     refreshMetrics,
-  } = useDashboardMetrics({ tenantId })
+  } = useDashboardMetrics({ tenantId: (lastScanMode === 'region' ? '' : tenantId) })
 
   // Scroll position tracking for each section
   const scrollPositions = useRef<Record<string, number>>({})
@@ -102,6 +120,8 @@ export function ContentArea({
       scanMode?: ScanMode,
       scanTarget?: string
     ) => {
+      console.log('[ContentArea] Scan complete:', { scanMode, scanTarget, tenantId })
+      
       // Store scan mode and target for display
       if (scanMode) {
         setLastScanMode(scanMode)
@@ -111,11 +131,20 @@ export function ContentArea({
       // Call the original handler
       originalOnScanComplete(findings, stats, tenantId, snapshotKey)
 
-      // Refresh dashboard metrics after scan completion
-      // Use a small delay to ensure backend has processed the scan
-      setTimeout(() => {
-        refreshMetrics(tenantId)
-      }, 1000)
+      // Only refresh customer metrics for customer scans, not region scans
+      // Region scans will use useRegionalMetrics hook instead
+      if (scanMode === 'customer' && tenantId && tenantId !== 'cross-account') {
+        setTimeout(() => {
+          console.log('[ContentArea] Refreshing customer metrics for:', tenantId)
+          refreshMetrics(tenantId)
+        }, 1000)
+      } else if (scanMode === 'region') {
+        console.log('[ContentArea] Region scan - triggering regional metrics refresh')
+        // Trigger regional metrics refresh by incrementing the key
+        setTimeout(() => {
+          setRegionalRefreshKey(prev => prev + 1)
+        }, 1000)
+      }
     },
     [originalOnScanComplete, refreshMetrics]
   )
@@ -136,6 +165,8 @@ export function ContentArea({
             onRefresh={refreshMetrics}
             scanMode={lastScanMode || 'customer'}
             scanTarget={lastScanTarget || undefined}
+            selectedCustomer={selectedCustomer}
+            regionalRefreshKey={regionalRefreshKey}
           />
         )
       case ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION:
@@ -195,7 +226,7 @@ export function ContentArea({
         onLoadingChange={onLoadingChange}
         currentTenantId={tenantId}
         onReset={onReset}
-        onCustomerChange={setSelectedCustomer}
+        onCustomerChange={handleCustomerChange}
       />
 
       {/* Region Scan Info Banner */}
