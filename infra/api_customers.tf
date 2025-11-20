@@ -16,6 +16,13 @@ resource "aws_apigatewayv2_route" "register_customer" {
   target    = "integrations/${aws_apigatewayv2_integration.registration.id}"
 }
 
+# POST /customers/verify-and-register (no authentication)
+resource "aws_apigatewayv2_route" "verify_and_register_customer" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /customers/verify-and-register"
+  target    = "integrations/${aws_apigatewayv2_integration.registration.id}"
+}
+
 resource "aws_lambda_permission" "registration_api" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
