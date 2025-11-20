@@ -29,6 +29,16 @@ output "web_url" {
   value       = "http://${aws_s3_bucket.web.bucket}.s3-website-${var.aws_region}.amazonaws.com"
 }
 
+output "cloudformation_template_url" {
+  description = "URL for the customer onboarding CloudFormation template"
+  value       = "https://${aws_s3_bucket.rules.bucket}.s3.amazonaws.com/templates/customer-onboarding-role.yaml"
+}
+
+output "trusted_account_id" {
+  description = "AWS Account ID for trusted access (used in CloudFormation template)"
+  value       = data.aws_caller_identity.current.account_id
+}
+
 output "findings_table" {
   description = "DynamoDB findings table"
   value       = aws_dynamodb_table.findings.name

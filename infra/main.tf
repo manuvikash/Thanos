@@ -22,6 +22,9 @@ provider "aws" {
   region = "us-west-1"
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
 # Random suffix for unique resource names
 resource "random_id" "suffix" {
   byte_length = 4
