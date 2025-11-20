@@ -15,3 +15,9 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "project_prefix" {
+  description = "Prefix used for resource names (e.g. project-environment)"
+  type        = string
+  default     = "cloud-golden-guard-dev"
+}

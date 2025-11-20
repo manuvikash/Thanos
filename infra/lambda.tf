@@ -55,10 +55,34 @@ resource "aws_iam_role_policy" "scan_handler" {
       {
         Effect = "Allow"
         Action = [
+          "s3:ListAllMyBuckets",
+          "s3:GetBucketPublicAccessBlock"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "dynamodb:PutItem",
           "dynamodb:BatchWriteItem"
         ]
         Resource = aws_dynamodb_table.findings.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:ListPolicies",
+          "iam:GetPolicyVersion",
+          "iam:GetPolicy"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeSecurityGroups"
+        ]
+        Resource = "*"
       },
       {
         Effect = "Allow"
