@@ -1,10 +1,5 @@
-import { useState } from 'react'
-import RegistrationForm from '../components/registration/RegistrationForm'
 import { RegistrationHeader } from '../components/registration/RegistrationHeader'
-import FeatureCard from '../components/registration/FeatureCard'
-import { CloudIcon } from '../components/icons/CloudIcon'
-import { ShieldIcon } from '../components/icons/ShieldIcon'
-import { CostIcon } from '../components/icons/CostIcon'
+import ConnectAws from '../components/ConnectAws'
 
 // Background decorative component - gradient sphere in top-right
 const SphereBackground = () => {
@@ -65,29 +60,6 @@ const GeometricFooter = () => {
 }
 
 export default function RegistrationPage() {
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  const handleSuccess = (message: string) => {
-    setSuccessMessage(message)
-    setErrorMessage(null)
-    // Auto-clear success message after 5 seconds
-    setTimeout(() => setSuccessMessage(null), 5000)
-  }
-
-  const handleError = (error: string) => {
-    setErrorMessage(error)
-    setSuccessMessage(null)
-    // Auto-clear error message after 5 seconds
-    setTimeout(() => setErrorMessage(null), 5000)
-  }
-
-  const scrollToForm = () => {
-    const formElement = document.getElementById('customer-form')
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
 
   return (
     <div className="relative min-h-screen bg-[#0C1A1A]">
@@ -99,80 +71,17 @@ export default function RegistrationPage() {
       <div className="relative z-10">
         <RegistrationHeader />
         
-        <main className="px-6 md:px-12 lg:px-24 pb-24">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24 pt-12">
-              <div className="space-y-8">
-                <div className="inline-block px-4 py-1 rounded-full bg-neutral-800/50 border border-neutral-700 text-neutral-300 text-sm font-mono-custom">
-                  v1.0.0 Public Beta
-                </div>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-100 tracking-tighter leading-tight">
-                  Secure Your <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-500">
-                    Cloud Infrastructure
-                  </span>
-                </h1>
-                <p className="text-xl text-neutral-400 max-w-lg leading-relaxed">
-                  Automated security scanning, compliance monitoring, and cost optimization for your AWS environment.
-                </p>
-                <div className="flex flex-wrap gap-4 pt-4">
-                  <button 
-                    onClick={scrollToForm}
-                    className="bg-neutral-100 hover:bg-neutral-200 text-[#0C1A1A] font-semibold py-3 px-8 rounded-md transition duration-200 font-mono-custom"
-                  >
-                    Get Started
-                  </button>
-                  <a 
-                    href="https://github.com/manuvikash/thanos" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="bg-transparent border border-neutral-700 hover:border-neutral-500 text-neutral-300 py-3 px-8 rounded-md transition duration-200 font-mono-custom"
-                  >
-                    View Documentation
-                  </a>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-6">
-                <FeatureCard 
-                  icon={<CloudIcon />}
-                  title="Multi-Region Scanning"
-                  description="Automatically discover and scan resources across all enabled AWS regions."
-                />
-                <FeatureCard 
-                  icon={<ShieldIcon />}
-                  title="Security & Compliance"
-                  description="Detect misconfigurations and security risks against industry best practices."
-                />
-                <FeatureCard 
-                  icon={<CostIcon />}
-                  title="Resource Inventory"
-                  description="Maintain a comprehensive inventory of your cloud assets and configurations."
-                />
-              </div>
+        <main className="px-6 md:px-12 lg:px-24 py-24 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="max-w-2xl mx-auto w-full">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-bold text-neutral-100 tracking-tighter mb-4">
+                Onboard New Customer
+              </h1>
+              <p className="text-lg text-neutral-400">
+                Connect your AWS account to get started with security scanning and compliance monitoring.
+              </p>
             </div>
-
-            <div id="customer-form" className="scroll-mt-24">
-              {successMessage && (
-                <div className="mb-8 p-4 bg-green-900/30 border border-green-800 rounded-md text-green-200 flex items-center gap-3">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {successMessage}
-                </div>
-              )}
-
-              {errorMessage && (
-                <div className="mb-8 p-4 bg-red-900/30 border border-red-800 rounded-md text-red-200 flex items-center gap-3">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {errorMessage}
-                </div>
-              )}
-
-              <RegistrationForm onSuccess={handleSuccess} onError={handleError} />
-            </div>
+            <ConnectAws />
           </div>
         </main>
 

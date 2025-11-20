@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import HorizontalScanBar from './HorizontalScanBar'
 import { OverviewMetricsSection } from './OverviewMetricsSection'
@@ -9,6 +9,7 @@ import { FindingsTableSection } from './FindingsTableSection'
 import { Finding } from '../api'
 import { ROUTES } from '../routes'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
+import { ScanMode } from '../hooks/useScanLogic'
 
 interface ContentAreaProps {
   tenantId: string
@@ -35,6 +36,8 @@ export function ContentArea({
   onReset,
 }: ContentAreaProps) {
   const location = useLocation()
+  const [lastScanMode, setLastScanMode] = useState<ScanMode | null>(null)
+  const [lastScanTarget, setLastScanTarget] = useState<string | null>(null)
 
   // Use custom hook for dashboard metrics
   const {
@@ -94,8 +97,16 @@ export function ContentArea({
       findings: Finding[],
       stats: { resources: number; findings: number },
       tenantId: string,
-      snapshotKey: string
+      snapshotKey: string,
+      scanMode?: ScanMode,
+      scanTarget?: string
     ) => {
+      // Store scan mode and target for display
+      if (scanMode) {
+        setLastScanMode(scanMode)
+        setLastScanTarget(scanTarget || null)
+      }
+
       // Call the original handler
       originalOnScanComplete(findings, stats, tenantId, snapshotKey)
 
@@ -122,6 +133,8 @@ export function ContentArea({
             error={metricsError}
             lastUpdated={lastUpdated}
             onRefresh={refreshMetrics}
+            scanMode={lastScanMode || 'customer'}
+            scanTarget={lastScanTarget || undefined}
           />
         )
       case ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION:
@@ -180,6 +193,20 @@ export function ContentArea({
         currentTenantId={tenantId}
         onReset={onReset}
       />
+
+      {/* Region Scan Info Banner */}
+      {lastScanMode === 'region' && lastScanTarget && (
+        <div className="bg-blue-900/30 border-b border-blue-700/50 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-300">Cross-Account Regional Scan</p>
+              <p className="text-xs text-blue-300/70">
+                Showing combined findings for all customers in <span className="font-semibold">{lastScanTarget}</span> region
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Route-based section rendering with scroll container */}
       <div ref={contentRef} className="overflow-y-auto flex-1">
