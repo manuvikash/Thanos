@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight, FileCode, LogOut, Home } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, FileCode, LogOut, Home, Settings } from 'lucide-react'
 import { signOut } from 'aws-amplify/auth'
 import {
   Sidebar,
@@ -63,6 +63,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Rules',
     url: ROUTES.RULES,
     icon: FileCode,
+  },
+  {
+    title: 'Configuration',
+    url: ROUTES.CONFIG,
+    icon: Settings,
   },
 ]
 

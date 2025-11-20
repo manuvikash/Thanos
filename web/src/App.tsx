@@ -17,6 +17,7 @@ import RegistrationPage from './pages/RegistrationPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Login'
 import { RulesPage } from './pages/RulesPage'
+import ConfigManagement from './pages/ConfigManagement'
 import { configureAuth } from './utils/auth'
 import { RequireAuth } from './components/auth/RequireAuth'
 
@@ -182,6 +183,9 @@ function App() {
 
             {/* Rules Management route */}
             <Route path={ROUTES.RULES} element={<RulesPage />} />
+
+            {/* Configuration Management route */}
+            <Route path={ROUTES.CONFIG} element={<ConfigManagement />} />
 
             {/* Catch-all route for invalid paths - redirect to default with toast notification */}
             <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />

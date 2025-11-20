@@ -11,6 +11,7 @@ export const ROUTES = {
   },
   FINDINGS: '/findings',
   RULES: '/rules',
+  CONFIG: '/config',
   REGISTER: '/register',
 } as const
 

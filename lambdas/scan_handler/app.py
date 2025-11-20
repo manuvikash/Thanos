@@ -137,26 +137,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count=len(resources),
         )
         
-        # Step 3: Load rules from DynamoDB
-        logger.info("Loading rules from DynamoDB")
-        if rules_source == "s3":
-            # Legacy S3-based rules (kept for backward compatibility)
-            rules = load_rules(rules_source, tenant_id, RULES_BUCKET)
-        else:
-            # Load all rules from DynamoDB (default + custom)
-            if not RULES_TABLE:
-                raise ValueError("RULES_TABLE environment variable not set")
-            rules = load_rules_from_dynamodb(tenant_id, RULES_TABLE)
+        # Step 3: Evaluate resources against hierarchical configuration
+        logger.info("Evaluating resources against hierarchical configuration")
         
-        log_context(
-            logger,
-            "info",
-            "Rules loaded",
-            tenant_id=tenant_id,
-            count=len(rules),
-        )
-        
-        # Step 4: Write snapshot to S3 first to get snapshot_key
+        # Step 4: Write snapshot to S3
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         snapshot_key = write_snapshot(
             SNAPSHOTS_BUCKET,
@@ -165,9 +149,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             timestamp,
         )
         
-        # Step 5: Evaluate resources against rules (with snapshot_key)
-        logger.info("Evaluating resources against rules")
-        findings = evaluate_resources(resources, rules, tenant_id, snapshot_key)
+        # Step 5: Evaluate resources against hierarchical configuration
+        logger.info("Evaluating resources against hierarchical configuration")
+        findings = evaluate_resources(
+            tenant_id=tenant_id,
+            resources=resources,
+            table_name=RULES_TABLE
+        )
         log_context(
             logger,
             "info",
