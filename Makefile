@@ -58,6 +58,15 @@ package-lambdas:
 	@pip install -r lambdas/scan_handler/requirements.txt -t dist/scan_handler_build/ --quiet
 	@cd dist/scan_handler_build && zip -r ../scan_handler.zip . -q
 	@rm -rf dist/scan_handler_build
+
+	@echo "Packaging onboarding_handler..."
+	@mkdir -p dist/onboarding_handler_build
+	@cp -r lambdas/common dist/onboarding_handler_build/
+	@cp -r lambdas/onboarding_handler/*.py dist/onboarding_handler_build/
+	@cp -r rules dist/onboarding_handler_build/
+	@pip install -r lambdas/onboarding_handler/requirements.txt -t dist/onboarding_handler_build/ --quiet
+	@cd dist/onboarding_handler_build && zip -r ../onboarding_handler.zip . -q
+	@rm -rf dist/onboarding_handler_build
 	
 	@echo "Packaging findings_handler..."
 	@mkdir -p dist/findings_handler_build
