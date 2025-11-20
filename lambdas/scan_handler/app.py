@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from common.aws import assume_role, get_enabled_regions
 from common.normalize import collect_resources
-from common.s3io import write_snapshot, load_rules
+from common.s3io import write_snapshot, load_rules, load_rules_from_dynamodb
 from common.eval import evaluate_resources
 from common.ddb import put_findings
 from common.logging import get_logger, log_context
@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 # Environment variables
 SNAPSHOTS_BUCKET = os.environ.get("SNAPSHOTS_BUCKET", "")
 RULES_BUCKET = os.environ.get("RULES_BUCKET", "")
+RULES_TABLE = os.environ.get("RULES_TABLE", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
 SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
 sns_client = boto3.client("sns")
@@ -136,18 +137,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count=len(resources),
         )
         
-        # Step 3: Load rules
-        logger.info(f"Loading rules from {rules_source}")
-        rules = load_rules(rules_source, tenant_id, RULES_BUCKET if rules_source == "s3" else None)
-        log_context(
-            logger,
-            "info",
-            "Rules loaded",
-            tenant_id=tenant_id,
-            count=len(rules),
-        )
+        # Step 3: Evaluate resources against hierarchical configuration
+        logger.info("Evaluating resources against hierarchical configuration")
         
-        # Step 4: Write snapshot to S3 first to get snapshot_key
+        # Step 4: Write snapshot to S3
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         snapshot_key = write_snapshot(
             SNAPSHOTS_BUCKET,
@@ -156,9 +149,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             timestamp,
         )
         
-        # Step 5: Evaluate resources against rules (with snapshot_key)
-        logger.info("Evaluating resources against rules")
-        findings = evaluate_resources(resources, rules, tenant_id, snapshot_key)
+        # Step 5: Evaluate resources against hierarchical configuration
+        logger.info("Evaluating resources against hierarchical configuration")
+        findings = evaluate_resources(
+            tenant_id=tenant_id,
+            resources=resources,
+            table_name=RULES_TABLE
+        )
         log_context(
             logger,
             "info",

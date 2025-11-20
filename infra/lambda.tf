@@ -83,6 +83,13 @@ resource "aws_iam_role_policy" "scan_handler" {
           "ec2:DescribeSecurityGroups"
         ]
         Resource = "*"
+          "dynamodb:Query",
+          "dynamodb:GetItem"
+        ]
+        Resource = [
+          aws_dynamodb_table.rules.arn,
+          "${aws_dynamodb_table.rules.arn}/index/*"
+        ]
       },
       {
         Effect = "Allow"
@@ -90,6 +97,22 @@ resource "aws_iam_role_policy" "scan_handler" {
           "sns:Publish"
         ]
         Resource = "${aws_sns_topic.critical_findings_alerts.arn}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*",
+          "rds:Describe*",
+          "s3:List*",
+          "s3:Get*",
+          "iam:List*",
+          "iam:Get*",
+          "lambda:List*",
+          "lambda:Get*",
+          "dynamodb:List*",
+          "dynamodb:Describe*"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -110,6 +133,7 @@ resource "aws_lambda_function" "scan_handler" {
     variables = {
       SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
       RULES_BUCKET     = aws_s3_bucket.rules.id
+      RULES_TABLE      = aws_dynamodb_table.rules.name
       FINDINGS_TABLE   = aws_dynamodb_table.findings.name
       ALERTS_TOPIC_ARN = aws_sns_topic.critical_findings_alerts.arn
     }

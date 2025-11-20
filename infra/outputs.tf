@@ -49,3 +49,19 @@ output "customers_table" {
 #   description = "Customer Portal S3 bucket name"
 #   value       = aws_s3_bucket.customer_portal.id
 # }
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito User Pool Client ID"
+  value       = aws_cognito_user_pool_client.client.id
+}
+
+output "admin_temporary_password" {
+  description = "Temporary password for the admin user"
+  value       = random_password.admin_password.result
+  sensitive   = true
+}

@@ -11,14 +11,8 @@ export interface Theme {
 
 export const themes: Theme[] = [
   {
-    id: 'teal-dark',
-    name: 'Teal Dark',
-    description: 'Original teal theme with dark background',
-    cssClass: 'theme-teal-dark',
-  },
-  {
     id: 'slate-dark',
-    name: 'Black',
+    name: 'Midnight',
     description: 'Pure black theme with minimal colors',
     cssClass: 'theme-slate-dark',
   },
@@ -27,6 +21,12 @@ export const themes: Theme[] = [
     name: 'Ocean Light',
     description: 'Clean light theme with ocean blue accents',
     cssClass: 'theme-ocean-light',
+  },
+  {
+    id: 'teal-dark',
+    name: 'Teal Dark',
+    description: 'Original teal theme with dark background',
+    cssClass: 'theme-teal-dark',
   },
 ];
 
