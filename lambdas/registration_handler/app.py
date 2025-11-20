@@ -8,7 +8,8 @@ customer records in DynamoDB.
 import json
 import os
 import boto3
-from typing import Dict, Any
+import re
+from typing import Dict, Any, Optional
 from botocore.exceptions import ClientError
 
 # Import from common modules
@@ -20,8 +21,10 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Initialize DynamoDB client
+# Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
+sts_client = boto3.client('sts')
+cloudformation_client = boto3.client('cloudformation')
 
 
 def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -91,6 +94,129 @@ def check_duplicate_tenant(table_name: str, tenant_id: str) -> bool:
         raise
 
 
+def verify_cloudformation_stack(account_id: str, region: str, role_arn: str) -> bool:
+    """
+    Verify that the CloudFormation stack exists in the customer's account.
+    
+    Args:
+        account_id: AWS account ID
+        region: AWS region
+        role_arn: IAM role ARN to assume
+        
+    Returns:
+        True if stack exists and is in CREATE_COMPLETE state, False otherwise
+    """
+    try:
+        # Assume role in customer account
+        assumed_role = sts_client.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName='CloudGoldenGuardVerification',
+            ExternalId='cloud-golden-guard-audit'
+        )
+        
+        # Create CloudFormation client with assumed credentials
+        cfn_client = boto3.client(
+            'cloudformation',
+            region_name=region,
+            aws_access_key_id=assumed_role['Credentials']['AccessKeyId'],
+            aws_secret_access_key=assumed_role['Credentials']['SecretAccessKey'],
+            aws_session_token=assumed_role['Credentials']['SessionToken']
+        )
+        
+        # Check for stack
+        response = cfn_client.describe_stacks(
+            StackName='CloudGoldenGuardAuditRole'
+        )
+        
+        stacks = response.get('Stacks', [])
+        if not stacks:
+            logger.warning(f"Stack not found in account {account_id}")
+            return False
+        
+        stack = stacks[0]
+        stack_status = stack.get('StackStatus')
+        
+        logger.info(f"Stack status in account {account_id}: {stack_status}")
+        
+        # Check if stack is in a successful state
+        return stack_status in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']
+        
+    except ClientError as e:
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code == 'ValidationError':
+            logger.warning(f"Stack does not exist in account {account_id}")
+            return False
+        logger.error(f"Error verifying stack: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error verifying stack: {e}")
+        return False
+
+
+def generate_tenant_id(account_id: str) -> str:
+    """
+    Generate a tenant ID from account ID.
+    
+    Args:
+        account_id: AWS account ID
+        
+    Returns:
+        Generated tenant ID
+    """
+    return f"customer-{account_id}"
+
+
+def get_role_arn_from_stack(account_id: str, region: str, role_arn: str) -> Optional[str]:
+    """
+    Get the IAM role ARN from the CloudFormation stack outputs.
+    
+    Args:
+        account_id: AWS account ID
+        region: AWS region
+        role_arn: IAM role ARN to assume for verification
+        
+    Returns:
+        Role ARN from stack output or None
+    """
+    try:
+        # Assume role in customer account
+        assumed_role = sts_client.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName='CloudGoldenGuardRoleRetrieval'
+        )
+        
+        # Create CloudFormation client
+        cfn_client = boto3.client(
+            'cloudformation',
+            region_name=region,
+            aws_access_key_id=assumed_role['Credentials']['AccessKeyId'],
+            aws_secret_access_key=assumed_role['Credentials']['SecretAccessKey'],
+            aws_session_token=assumed_role['Credentials']['SessionToken']
+        )
+        
+        # Get stack outputs
+        response = cfn_client.describe_stacks(
+            StackName='CloudGoldenGuardAuditRole'
+        )
+        
+        stacks = response.get('Stacks', [])
+        if not stacks:
+            return None
+        
+        outputs = stacks[0].get('Outputs', [])
+        for output in outputs:
+            if output.get('OutputKey') == 'RoleArn':
+                return output.get('OutputValue')
+        
+        # If not in outputs, construct it
+        return f"arn:aws:iam::{account_id}:role/CloudGoldenGuardAuditRole"
+        
+    except Exception as e:
+        logger.error(f"Error getting role ARN from stack: {e}")
+        # Fallback: construct the ARN
+        return f"arn:aws:iam::{account_id}:role/CloudGoldenGuardAuditRole"
+
+
 def register_customer(table_name: str, customer: Customer) -> None:
     """
     Write customer record to DynamoDB.
@@ -114,12 +240,10 @@ def register_customer(table_name: str, customer: Customer) -> None:
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Lambda handler for customer registration.
-    
-    Validates customer data, checks for duplicates, and stores in DynamoDB.
+    Main Lambda handler - routes requests to appropriate handlers.
     
     Args:
-        event: API Gateway event containing customer registration data
+        event: API Gateway event
         context: Lambda context object
         
     Returns:
@@ -133,6 +257,36 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'error': 'Internal server error'
         })
     
+    # Get the path from the event
+    path = event.get('path', event.get('rawPath', ''))
+    http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method', ''))
+    
+    logger.info(f"Request: {http_method} {path}")
+    
+    # Route to appropriate handler
+    if path.endswith('/verify-and-register') and http_method == 'POST':
+        return handle_verify_and_register(event, table_name)
+    elif path.endswith('/register') and http_method == 'POST':
+        return handle_register(event, table_name)
+    else:
+        return create_response(404, {
+            'error': 'Not found'
+        })
+
+
+def handle_register(event: Dict[str, Any], table_name: str) -> Dict[str, Any]:
+    """
+    Handle customer registration.
+    
+    Validates customer data, checks for duplicates, and stores in DynamoDB.
+    
+    Args:
+        event: API Gateway event containing customer registration data
+        table_name: DynamoDB table name
+        
+    Returns:
+        API Gateway response with status code and body
+    """
     try:
         # Parse request body
         try:
@@ -208,4 +362,124 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.error(f"Unexpected error during registration: {e}")
         return create_response(500, {
             'error': 'An unexpected error occurred. Please try again.'
+        })
+
+
+def handle_verify_and_register(event: Dict[str, Any], table_name: str) -> Dict[str, Any]:
+    """
+    Handle verification and registration of customer.
+    Verifies CloudFormation stack exists, then registers the customer.
+    
+    Args:
+        event: API Gateway event
+        table_name: DynamoDB table name
+        
+    Returns:
+        API Gateway response
+    """
+    try:
+        # Parse request body
+        try:
+            data = parse_request_body(event)
+        except ValueError as e:
+            logger.warning(f"Invalid request: {str(e)}")
+            return create_response(400, {'error': str(e)})
+        
+        # Extract fields
+        account_id = data.get('account_id', '').strip()
+        regions = data.get('regions', [])
+        
+        # Validate account ID
+        if not re.match(r'^\d{12}$', account_id):
+            return create_response(400, {
+                'error': 'Invalid account_id. Must be a 12-digit number.'
+            })
+        
+        # Validate regions
+        if not isinstance(regions, list) or len(regions) == 0:
+            return create_response(400, {
+                'error': 'regions must be a non-empty array'
+            })
+        
+        # Use the first region for verification
+        primary_region = regions[0]
+        
+        # Generate tenant ID and role ARN
+        tenant_id = generate_tenant_id(account_id)
+        expected_role_arn = f"arn:aws:iam::{account_id}:role/CloudGoldenGuardAuditRole"
+        
+        # Check if already registered
+        if check_duplicate_tenant(table_name, tenant_id):
+            logger.info(f"Customer already registered: {tenant_id}")
+            # Return existing customer
+            table = dynamodb.Table(table_name)
+            response = table.get_item(Key={'tenant_id': tenant_id})
+            if 'Item' in response:
+                return create_response(200, {
+                    'message': 'Customer already registered',
+                    'customer': response['Item'],
+                    'tenant_id': tenant_id
+                })
+        
+        # Verify CloudFormation stack exists
+        logger.info(f"Verifying CloudFormation stack for account {account_id} in region {primary_region}")
+        
+        # First, try to assume the role to verify it exists
+        try:
+            assumed_role = sts_client.assume_role(
+                RoleArn=expected_role_arn,
+                RoleSessionName='CloudGoldenGuardVerification',
+                ExternalId='cloud-golden-guard-audit'
+            )
+            logger.info(f"Successfully assumed role for account {account_id}")
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            logger.error(f"Failed to assume role: {error_code} - {str(e)}")
+            return create_response(400, {
+                'error': 'Could not assume the IAM role. Please ensure the CloudFormation stack was created successfully and the role has the correct trust policy.'
+            })
+        
+        # Verify stack exists using the assumed role
+        stack_exists = verify_cloudformation_stack(account_id, primary_region, expected_role_arn)
+        
+        if not stack_exists:
+            return create_response(400, {
+                'error': 'CloudFormation stack "CloudGoldenGuardAuditRole" not found or not in completed state. Please create the stack first.'
+            })
+        
+        # Get role ARN from stack (or use expected one)
+        role_arn = get_role_arn_from_stack(account_id, primary_region, expected_role_arn) or expected_role_arn
+        
+        # Generate customer name from account ID
+        customer_name = f"AWS-{account_id}"
+        
+        # Create customer object
+        customer = Customer.create(
+            tenant_id=tenant_id,
+            customer_name=customer_name,
+            role_arn=role_arn,
+            account_id=account_id,
+            regions=regions
+        )
+        
+        # Register customer in DynamoDB
+        register_customer(table_name, customer)
+        
+        logger.info(f"Customer verified and registered successfully: {tenant_id}")
+        
+        return create_response(201, {
+            'message': 'Customer verified and registered successfully',
+            'customer': customer.to_dict(),
+            'tenant_id': tenant_id
+        })
+        
+    except ClientError as e:
+        logger.error(f"AWS error during verification: {e}")
+        return create_response(500, {
+            'error': 'Failed to verify and register customer. Please try again.'
+        })
+    except Exception as e:
+        logger.error(f"Unexpected error during verification: {e}")
+        return create_response(500, {
+            'error': f'An unexpected error occurred: {str(e)}'
         })
