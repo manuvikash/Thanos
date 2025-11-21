@@ -38,9 +38,17 @@ resource "aws_iam_role_policy" "registration_handler" {
         Effect = "Allow"
         Action = [
           "dynamodb:PutItem",
-          "dynamodb:GetItem"
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
         ]
         Resource = aws_dynamodb_table.customers.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Resource = "arn:aws:iam::*:role/CloudGoldenGuardAuditRole"
       }
     ]
   })

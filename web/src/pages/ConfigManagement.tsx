@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BaseConfigs from '@/components/config/BaseConfigs';
 import ResourceGroups from '@/components/config/ResourceGroups';
 import Templates from '@/components/config/Templates';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ConfigManagement() {
   return (

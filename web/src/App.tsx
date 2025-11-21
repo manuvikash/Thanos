@@ -13,7 +13,7 @@ import { useToast } from './hooks/useToast'
 import { Finding } from './api'
 import { ROUTES } from './routes'
 import { SidebarInset } from './components/ui/sidebar'
-import RegistrationPage from './pages/RegistrationPage'
+import CustomerOnboarding from './pages/CustomerOnboarding'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Login'
 import { RulesPage } from './pages/RulesPage'
@@ -78,13 +78,8 @@ function App() {
           <Route path={ROUTES.ROOT} element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Registration Route - Standalone Layout */}
-          {/* TODO: Disable or protect registration if needed, but keeping as is for now or protecting? 
-              User said "no create account feature", but that might mean "no self-signup for admin". 
-              The registration page seems to be for "Customer Onboarding" (creating tenants), which an admin might do.
-              I'll protect it.
-          */}
-          <Route path={ROUTES.REGISTER} element={<RegistrationPage />} />
+          {/* Customer Onboarding Route - Standalone Layout */}
+          <Route path={ROUTES.REGISTER} element={<CustomerOnboarding />} />
 
           {/* Dashboard Routes - App Layout - Protected */}
           <Route

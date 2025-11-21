@@ -131,6 +131,12 @@ export interface CustomerRegistration {
 export interface CustomerResponse {
   message: string;
   customer: Customer;
+  tenant_id?: string;
+}
+
+export interface VerifyAndRegisterRequest {
+  account_id: string;
+  regions: string[];
 }
 
 export interface ResourceDetail {
@@ -344,6 +350,25 @@ export async function registerCustomer(
     }
 
     throw new Error(error.error || `HTTP ${response.status}: Registration failed`);
+  }
+
+  return response.json();
+}
+
+export async function verifyAndRegisterCustomer(
+  data: VerifyAndRegisterRequest
+): Promise<CustomerResponse> {
+  const response = await fetch(`${API_URL}/customers/verify-and-register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `HTTP ${response.status}: Verification failed`);
   }
 
   return response.json();

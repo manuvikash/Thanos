@@ -26,7 +26,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Save, FileText, Eye } from 'lucide-react';
 import { getTemplatesForResourceType, getSupportedResourceTypes } from '@/lib/baseConfigTemplates';
@@ -166,10 +165,6 @@ export default function BaseConfigs() {
     }
   };
 
-  const loadTemplate = (templateConfig: object) => {
-    setConfigJson(JSON.stringify(templateConfig, null, 2));
-  };
-
   const handleTemplateChange = (templateIndex: string) => {
     setSelectedTemplate(templateIndex);
     if (templateIndex && selectedType) {
@@ -185,7 +180,7 @@ export default function BaseConfigs() {
         const templates = getTemplatesForResourceType(selectedType);
         const template = templates[parseInt(templateIndex)];
         if (template) {
-          setConfigJson(JSON.stringify(template.config, null, 2));
+          setConfigJson(JSON.stringify(template.desired_config, null, 2));
         }
       }
     }
