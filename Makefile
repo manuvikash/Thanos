@@ -144,10 +144,8 @@ tf-destroy:
 	@echo "Running terraform destroy..."
 	cd infra && terraform destroy
 
-web-dev:
+web-dev: update-web-env
 	@echo "Starting Vite dev server..."
-	@echo "Make sure to set VITE_API_URL, VITE_COGNITO_USER_POOL_ID, and VITE_COGNITO_CLIENT_ID in web/.env"
-	@echo "You can run 'make update-web-env' to generate it automatically"
 	cd web && npm run dev
 
 web-build:
@@ -208,4 +206,6 @@ update-web-env:
 	@echo "VITE_API_URL=$$(cd infra && terraform output -raw api_url)" > web/.env
 	@echo "VITE_COGNITO_USER_POOL_ID=$$(cd infra && terraform output -raw cognito_user_pool_id)" >> web/.env
 	@echo "VITE_COGNITO_CLIENT_ID=$$(cd infra && terraform output -raw cognito_client_id)" >> web/.env
-	@echo "Web environment updated."
+	@echo "VITE_CLOUDFORMATION_TEMPLATE_URL=$$(cd infra && terraform output -raw cloudformation_template_url)" >> web/.env
+	@echo "VITE_TRUSTED_ACCOUNT_ID=$$(cd infra && terraform output -raw trusted_account_id)" >> web/.env
+	@echo "Web environment updated with all configuration values."
