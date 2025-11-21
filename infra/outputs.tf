@@ -49,6 +49,11 @@ output "customers_table" {
   value       = aws_dynamodb_table.customers.name
 }
 
+output "resources_table" {
+  description = "Resources inventory DynamoDB table name"
+  value       = aws_dynamodb_table.resources_inventory.name
+}
+
 # Commented out - uncomment when customer portal infrastructure is deployed
 # output "customer_portal_url" {
 #   description = "Customer Portal URL"

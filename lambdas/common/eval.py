@@ -4,7 +4,9 @@ Simplified rule evaluation engine using hierarchical desired configuration.
 No complex check types - just compare actual config vs desired config.
 """
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 import re
+import uuid
 import boto3
 from botocore.exceptions import ClientError
 from .models import Resource, Finding
@@ -140,7 +142,7 @@ def fetch_matching_groups(table_name: str, resource: Resource) -> List[ResourceG
         return []
 
 
-def evaluate_resource(resource: Resource, table_name: str) -> List[Finding]:
+def evaluate_resource(resource: Resource, table_name: str) -> tuple:
     """
     Evaluate a resource against hierarchical desired configuration.
     
@@ -156,7 +158,7 @@ def evaluate_resource(resource: Resource, table_name: str) -> List[Finding]:
         table_name: DynamoDB table containing configs
         
     Returns:
-        List of findings (empty if compliant)
+        Tuple of (updated_resource, findings_list)
     """
     findings = []
     
@@ -164,7 +166,9 @@ def evaluate_resource(resource: Resource, table_name: str) -> List[Finding]:
     base_config = fetch_base_config(table_name, resource.resource_type)
     if not base_config:
         logger.debug(f"No base config found for {resource.resource_type}")
-        return findings
+        resource.compliance_status = "NOT_EVALUATED"
+        resource.last_evaluated = datetime.utcnow().isoformat()
+        return resource, findings
     
     # 2. Fetch matching groups
     matching_groups = fetch_matching_groups(table_name, resource)
@@ -176,35 +180,63 @@ def evaluate_resource(resource: Resource, table_name: str) -> List[Finding]:
     for group in matching_groups:
         desired_config = deep_merge(desired_config, group.desired_config)
     
-    # 4. Compare actual vs desired
+    # 4. Store hierarchy info in resource
+    resource.base_config_applied = f"{base_config.resource_type}#{base_config.version}"
+    resource.groups_applied = [g.name for g in matching_groups]
+    resource.desired_config = desired_config
+    resource.last_evaluated = datetime.utcnow().isoformat()
+    
+    # 5. Compare actual vs desired
     differences = compare_configs(desired_config, resource.config)
     
-    # 5. Generate findings for each difference
-    if differences:
-        # Create a single finding with all differences
+    # 6. Calculate compliance and drift score
+    if not differences:
+        resource.compliance_status = "COMPLIANT"
+        resource.drift_score = 0.0
+        resource.findings_count = 0
+    else:
+        resource.compliance_status = "NON_COMPLIANT"
+        # Drift score based on number of differences (normalized to 0-1)
+        resource.drift_score = min(1.0, len(differences) / 10.0)
+        
+        # Calculate severity based on difference types and values
+        severity = "LOW"
+        if len(differences) > 5:
+            severity = "MEDIUM"
+        if len(differences) > 10:
+            severity = "HIGH"
+        
+        # Generate finding
         finding = Finding(
             tenant_id=resource.tenant_id,
-            finding_id=f"{resource.arn}",
+            finding_id=f"{resource.arn}#{uuid.uuid4().hex[:8]}",
             resource_arn=resource.arn,
             resource_type=resource.resource_type,
             rule_id="hierarchical-config",
-            severity="MEDIUM",
+            severity=severity,
             status="OPEN",
+            message=f"Resource configuration drift detected: {len(differences)} differences from desired state",
             observed=resource.config,
             expected=desired_config,
+            timestamp=datetime.utcnow().isoformat(),
+            account_id=resource.account_id,
+            region=resource.region,
+            category="compliance",
             differences=differences,
             metadata={
-                "base_config_applied": True,
-                "groups_applied": [g.name for g in matching_groups],
-                "num_differences": len(differences)
+                "base_config_applied": resource.base_config_applied,
+                "groups_applied": resource.groups_applied,
+                "num_differences": len(differences),
+                "drift_score": resource.drift_score
             }
         )
         findings.append(finding)
+        resource.findings_count = len(findings)
     
-    return findings
+    return resource, findings
 
 
-def evaluate_resources(tenant_id: str, resources: List[Resource], table_name: str) -> List[Finding]:
+def evaluate_resources(tenant_id: str, resources: List[Resource], table_name: str) -> tuple:
     """
     Evaluate multiple resources against hierarchical configuration.
     
@@ -214,15 +246,17 @@ def evaluate_resources(tenant_id: str, resources: List[Resource], table_name: st
         table_name: DynamoDB table containing configs
         
     Returns:
-        List of all findings across all resources
+        Tuple of (updated_resources, all_findings)
     """
+    updated_resources = []
     all_findings = []
     
     for resource in resources:
         resource.tenant_id = tenant_id
-        findings = evaluate_resource(resource, table_name)
+        updated_resource, findings = evaluate_resource(resource, table_name)
+        updated_resources.append(updated_resource)
         all_findings.extend(findings)
     
     logger.info(f"Evaluated {len(resources)} resources, found {len(all_findings)} findings")
     
-    return all_findings
+    return updated_resources, all_findings

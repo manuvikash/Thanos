@@ -14,9 +14,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from common.aws import assume_role, get_enabled_regions
 from common.normalize import collect_resources
-from common.s3io import write_snapshot, load_rules, load_rules_from_dynamodb
+from common.s3io import write_snapshot
 from common.eval import evaluate_resources
 from common.ddb import put_findings
+from common.resource_inventory import put_resources
 from common.logging import get_logger, log_context
 
 logger = get_logger(__name__)
@@ -26,6 +27,7 @@ SNAPSHOTS_BUCKET = os.environ.get("SNAPSHOTS_BUCKET", "")
 RULES_BUCKET = os.environ.get("RULES_BUCKET", "")
 RULES_TABLE = os.environ.get("RULES_TABLE", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
+RESOURCES_TABLE = os.environ.get("RESOURCES_TABLE", "")
 SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
 sns_client = boto3.client("sns")
 
@@ -86,6 +88,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     }
     """
     try:
+        # Log the incoming event for debugging
+        logger.info(f"Received event: {json.dumps(event)}")
+        
         # Parse input
         body = event.get("body")
         if isinstance(body, str):
@@ -137,10 +142,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             count=len(resources),
         )
         
-        # Step 3: Evaluate resources against hierarchical configuration
-        logger.info("Evaluating resources against hierarchical configuration")
-        
-        # Step 4: Write snapshot to S3
+        # Step 3: Write snapshot to S3
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         snapshot_key = write_snapshot(
             SNAPSHOTS_BUCKET,
@@ -149,9 +151,19 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             timestamp,
         )
         
-        # Step 5: Evaluate resources against hierarchical configuration
+        # Generate unique scan ID
+        scan_id = f"scan-{uuid.uuid4().hex[:12]}"
+        
+        # Step 4: Evaluate resources against hierarchical configuration
         logger.info("Evaluating resources against hierarchical configuration")
-        findings = evaluate_resources(
+        
+        # Set snapshot and scan info on resources before evaluation
+        for resource in resources:
+            resource.tenant_id = tenant_id
+            resource.snapshot_key = snapshot_key
+            resource.scan_id = scan_id
+        
+        evaluated_resources, findings = evaluate_resources(
             tenant_id=tenant_id,
             resources=resources,
             table_name=RULES_TABLE
@@ -164,6 +176,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             findings_count=len(findings),
         )
         
+        # Step 5: Write resources to inventory table
+        if RESOURCES_TABLE:
+            logger.info(f"Writing {len(evaluated_resources)} resources to inventory")
+            put_resources(RESOURCES_TABLE, evaluated_resources)
+        
         # Step 6: Write findings to DynamoDB
         if findings:
             put_findings(FINDINGS_TABLE, findings)
@@ -172,6 +189,18 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 if str(fd.get("severity", "")).lower() == "high":
                     publish_critical_alert(fd)
         
+        # Calculate compliance statistics
+        compliance_stats = {
+            'total': len(evaluated_resources),
+            'compliant': sum(1 for r in evaluated_resources if r.compliance_status == 'COMPLIANT'),
+            'non_compliant': sum(1 for r in evaluated_resources if r.compliance_status == 'NON_COMPLIANT'),
+            'not_evaluated': sum(1 for r in evaluated_resources if r.compliance_status == 'NOT_EVALUATED'),
+        }
+        compliance_stats['compliance_percentage'] = (
+            (compliance_stats['compliant'] / compliance_stats['total'] * 100) 
+            if compliance_stats['total'] > 0 else 0
+        )
+        
         # Prepare response
         findings_sample = [f.to_dict() for f in findings[:10]]
         
@@ -179,10 +208,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "tenant_id": tenant_id,
             "account_id": account_id,
             "regions": regions,
+            "scan_id": scan_id,
             "totals": {
-                "resources": len(resources),
+                "resources": len(evaluated_resources),
                 "findings": len(findings),
             },
+            "compliance": compliance_stats,
             "findings_sample": findings_sample,
             "snapshot_key": snapshot_key,
         }
@@ -193,6 +224,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "Scan completed successfully",
             tenant_id=tenant_id,
             account_id=account_id,
+            compliance_percentage=compliance_stats['compliance_percentage'],
         )
         
         return {

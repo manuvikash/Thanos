@@ -20,6 +20,7 @@ export interface Finding {
   tenant_id: string;
   rule_id: string;
   resource_arn: string;
+  resource_type: string;
   severity: string;
   message: string;
   observed: any;
@@ -28,15 +29,58 @@ export interface Finding {
   account_id: string;
   region: string;
   category?: string; // compliance, type-golden, instance-golden
+  status?: string;
+  differences?: Array<{
+    path: string;
+    actual: any;
+    expected: any;
+  }>;
+  metadata?: any;
+}
+
+export interface Resource {
+  // Identity
+  arn: string;
+  resource_type: string;
+  region: string;
+  account_id: string;
+  tenant_id: string;
+  
+  // Configuration
+  config: any;
+  desired_config?: any;
+  metadata: any;
+  
+  // Compliance
+  compliance_status: 'COMPLIANT' | 'NON_COMPLIANT' | 'NOT_EVALUATED';
+  drift_score: number;
+  findings_count: number;
+  
+  // Tracking
+  last_evaluated: string;
+  snapshot_key: string;
+  scan_id: string;
+  
+  // Hierarchy
+  base_config_applied?: string;
+  groups_applied?: string[];
 }
 
 export interface ScanResponse {
   tenant_id: string;
   account_id: string;
   regions: string[];
+  scan_id: string;
   totals: {
     resources: number;
     findings: number;
+  };
+  compliance: {
+    total: number;
+    compliant: number;
+    non_compliant: number;
+    not_evaluated: number;
+    compliance_percentage: number;
   };
   findings_sample: Finding[];
   snapshot_key: string;
@@ -150,11 +194,11 @@ export interface ResourceDetail {
 
 export interface ResourcesResponse {
   tenant_id: string;
-  snapshot_key: string;
-  resources: ResourceDetail[];
+  resources: Resource[];
   totals: {
     total_resources: number;
     by_type: Record<string, number>;
+    by_compliance: Record<string, number>;
   };
 }
 
@@ -376,12 +420,27 @@ export async function verifyAndRegisterCustomer(
 
 export async function getResources(
   tenantId: string,
-  snapshotKey: string
+  snapshotKey?: string,
+  complianceStatus?: string,
+  resourceType?: string,
+  limit: number = 100
 ): Promise<ResourcesResponse> {
   const params = new URLSearchParams({
     tenant_id: tenantId,
-    snapshot_key: snapshotKey,
+    limit: limit.toString(),
   });
+
+  if (snapshotKey) {
+    params.append('snapshot_key', snapshotKey);
+  }
+
+  if (complianceStatus) {
+    params.append('compliance_status', complianceStatus);
+  }
+
+  if (resourceType) {
+    params.append('resource_type', resourceType);
+  }
 
   return fetchAPI(`/resources?${params.toString()}`);
 }

@@ -58,7 +58,10 @@ resource "aws_iam_role_policy" "scan_handler" {
           "dynamodb:PutItem",
           "dynamodb:BatchWriteItem"
         ]
-        Resource = aws_dynamodb_table.findings.arn
+        Resource = [
+          aws_dynamodb_table.findings.arn,
+          aws_dynamodb_table.resources_inventory.arn
+        ]
       },
       {
         Effect = "Allow"
@@ -93,6 +96,18 @@ resource "aws_iam_role_policy" "scan_handler" {
           "dynamodb:Describe*"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "arn:aws:kms:${var.aws_region}:*:key/*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "lambda.${var.aws_region}.amazonaws.com"
+          }
+        }
       }
     ]
   })
@@ -115,6 +130,7 @@ resource "aws_lambda_function" "scan_handler" {
       RULES_BUCKET     = aws_s3_bucket.rules.id
       RULES_TABLE      = aws_dynamodb_table.rules.name
       FINDINGS_TABLE   = aws_dynamodb_table.findings.name
+      RESOURCES_TABLE  = aws_dynamodb_table.resources_inventory.name
       ALERTS_TOPIC_ARN = aws_sns_topic.critical_findings_alerts.arn
     }
   }
@@ -249,6 +265,18 @@ resource "aws_iam_role_policy" "resources_handler" {
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.snapshots.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Query",
+          "dynamodb:GetItem",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          aws_dynamodb_table.resources_inventory.arn,
+          "${aws_dynamodb_table.resources_inventory.arn}/index/*"
+        ]
       }
     ]
   })
@@ -268,6 +296,7 @@ resource "aws_lambda_function" "resources_handler" {
   environment {
     variables = {
       SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
+      RESOURCES_TABLE  = aws_dynamodb_table.resources_inventory.name
     }
   }
 
