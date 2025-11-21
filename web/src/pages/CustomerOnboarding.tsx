@@ -33,8 +33,11 @@ const AWS_REGIONS = [
   'sa-east-1',
 ];
 
-// Get the trusted account ID from environment or use a default
-const TRUSTED_ACCOUNT_ID = import.meta.env.VITE_TRUSTED_ACCOUNT_ID || '688513069023';
+// Get configuration from environment variables
+const TRUSTED_ACCOUNT_ID = import.meta.env.VITE_TRUSTED_ACCOUNT_ID;
+const CLOUDFORMATION_TEMPLATE_URL = import.meta.env.VITE_CLOUDFORMATION_TEMPLATE_URL;
+
+// Note: We use S3 with region-agnostic endpoint (s3.amazonaws.com) so it works across all regions
 
 export default function CustomerOnboarding() {
   const [accountId, setAccountId] = useState('');
@@ -52,11 +55,20 @@ export default function CustomerOnboarding() {
       return;
     }
 
-    // S3 URL for the CloudFormation template
-    const templateUrl = 'https://cloud-golden-guard-dev-rules-5a4d6cdd.s3.us-west-1.amazonaws.com/templates/customer-onboarding-role.yaml';
-    
-    // Build the CloudFormation console URL with pre-filled template
-    const cfnUrl = `https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/create/review?stackName=CloudGoldenGuardAuditRole&templateURL=${encodeURIComponent(templateUrl)}&param_TrustedAccountId=${TRUSTED_ACCOUNT_ID}`;
+    // Validate configuration
+    if (!TRUSTED_ACCOUNT_ID) {
+      alert('Trusted account ID is not configured. Please check your environment configuration.');
+      return;
+    }
+
+    if (!CLOUDFORMATION_TEMPLATE_URL) {
+      alert('CloudFormation template URL is not configured. Please check your environment configuration.');
+      return;
+    }
+
+    // Build the CloudFormation console URL with S3 template URL
+    // Using region-agnostic S3 endpoint (s3.amazonaws.com) works across all regions
+    const cfnUrl = `https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/create/review?stackName=CloudGoldenGuardAuditRole&templateURL=${encodeURIComponent(CLOUDFORMATION_TEMPLATE_URL)}&param_TrustedAccountId=${TRUSTED_ACCOUNT_ID}`;
 
     // Open in new tab
     window.open(cfnUrl, '_blank');

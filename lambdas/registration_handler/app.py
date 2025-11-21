@@ -11,6 +11,7 @@ import boto3
 import re
 from typing import Dict, Any, Optional
 from botocore.exceptions import ClientError
+from datetime import datetime
 
 # Import from common modules
 import sys
@@ -409,15 +410,42 @@ def handle_verify_and_register(event: Dict[str, Any], table_name: str) -> Dict[s
         expected_role_arn = f"arn:aws:iam::{account_id}:role/CloudGoldenGuardAuditRole"
         
         # Check if already registered
+        table = dynamodb.Table(table_name)
+        existing_customer = None
+        
         if check_duplicate_tenant(table_name, tenant_id):
-            logger.info(f"Customer already registered: {tenant_id}")
-            # Return existing customer
-            table = dynamodb.Table(table_name)
+            logger.info(f"Customer already registered: {tenant_id}, checking if regions need updating")
             response = table.get_item(Key={'tenant_id': tenant_id})
             if 'Item' in response:
+                existing_customer = response['Item']
+                existing_regions = set(existing_customer.get('regions', []))
+                new_regions = set(regions)
+                
+                # Check if we need to add new regions
+                if not new_regions.issubset(existing_regions):
+                    # Merge regions
+                    merged_regions = list(existing_regions.union(new_regions))
+                    
+                    # Update the customer record with merged regions
+                    now = datetime.utcnow().isoformat() + "Z"
+                    table.update_item(
+                        Key={'tenant_id': tenant_id},
+                        UpdateExpression='SET regions = :regions, updated_at = :updated_at',
+                        ExpressionAttributeValues={
+                            ':regions': merged_regions,
+                            ':updated_at': now
+                        }
+                    )
+                    
+                    logger.info(f"Updated regions for customer {tenant_id}: {merged_regions}")
+                    
+                    # Fetch updated record
+                    response = table.get_item(Key={'tenant_id': tenant_id})
+                    existing_customer = response['Item']
+                
                 return create_response(200, {
-                    'message': 'Customer already registered',
-                    'customer': response['Item'],
+                    'message': 'Customer already registered' if new_regions.issubset(existing_regions) else 'Customer updated with new regions',
+                    'customer': existing_customer,
                     'tenant_id': tenant_id
                 })
         
