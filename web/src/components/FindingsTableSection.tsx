@@ -3,7 +3,8 @@ import { Finding, Resource, getResources } from '../api'
 import { FindingsView } from './FindingsView'
 import ResourcesTable from './ResourcesTable'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Button } from './ui/button'
 
 interface FindingsTableSectionProps {
   findings: Finding[]
@@ -27,16 +28,13 @@ export function FindingsTableSection({
   const [resources, setResources] = useState<Resource[]>([])
   const [loadingResources, setLoadingResources] = useState(false)
   const [showResources, setShowResources] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
-    // If there are no findings but we have a scan completed (snapshotKey exists)
-    // Fetch the resources to display compliance status
+    // Fetch resources to show compliance status alongside findings
     const fetchResources = async () => {
-      // Only fetch if:
-      // 1. A scan has completed (snapshotKey exists)
-      // 2. There are no findings (all resources are compliant)
-      // 3. Not currently loading
-      if (!snapshotKey || !tenantId || findings.length > 0 || loading) {
+      // Only fetch if a scan has completed (snapshotKey exists)
+      if (!snapshotKey || !tenantId || loading) {
         setShowResources(false)
         return
       }
@@ -59,16 +57,55 @@ export function FindingsTableSection({
     }
 
     fetchResources()
-  }, [tenantId, findings, loading, snapshotKey])
+  }, [tenantId, loading, snapshotKey])
 
   // Show findings if there are any
   if (findings.length > 0 || loading) {
+    const compliantResources = resources.filter(r => 
+      r.compliance_status === 'COMPLIANT' || r.compliance_status === 'NOT_EVALUATED'
+    )
+    const totalResources = resources.length
+    
     return (
-      <FindingsView
-        findings={findings}
-        tenantId={tenantId}
-        loading={loading}
-      />
+      <div className="space-y-6">
+        <FindingsView
+          findings={findings}
+          tenantId={tenantId}
+          loading={loading}
+        />
+        
+        {/* Collapsible section for compliant and not-evaluated resources */}
+        {showResources && !loading && compliantResources.length > 0 && (
+          <Card>
+            <CardHeader 
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CardTitle>Compliant & Not Evaluated Resources</CardTitle>
+                </div>
+                <Button variant="ghost" size="sm">
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </div>
+              <CardDescription>
+                {compliantResources.length} resource{compliantResources.length !== 1 ? 's' : ''} without findings 
+                ({resources.filter(r => r.compliance_status === 'COMPLIANT').length} compliant, {resources.filter(r => r.compliance_status === 'NOT_EVALUATED').length} not evaluated)
+              </CardDescription>
+            </CardHeader>
+            {isExpanded && (
+              <CardContent>
+                <ResourcesTable
+                  resources={compliantResources}
+                  loading={loadingResources}
+                />
+              </CardContent>
+            )}
+          </Card>
+        )}
+      </div>
     )
   }
 
