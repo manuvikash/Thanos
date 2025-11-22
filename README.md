@@ -119,6 +119,19 @@ aws cloudformation create-stack \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
+### 6. MCP Server Integration (Optional)
+
+Enable AI assistants like Claude to query compliance data:
+
+```bash
+cd mcp
+./setup.sh  # Creates service account and configures MCP server
+```
+
+Restart Claude Desktop, then ask: *"Show me all non-compliant S3 buckets for customer-prod"*
+
+See [`mcp/README.md`](mcp/README.md) for details.
+
 ---
 
 ## Application Structure
@@ -257,6 +270,7 @@ This command will:
 ✅ **Custom Rules** - YAML-based security policies  
 ✅ **Multi-tenant** - Manage multiple AWS accounts  
 ✅ **Real-time Metrics** - Dashboard with findings analytics  
+✅ **MCP Integration** - AI assistants can query compliance data  
 ✅ **Theme Support** - Midnight, Ocean Light, and Teal Dark themes  
 ✅ **Serverless** - No servers to manage, pay only for what you use  
 

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "thanos": {
+      "command": "python",
+      "args": ["/absolute/path/to/thanos/mcp/server.py"],
+      "env": {
+        "THANOS_API_URL": "https://your-api-id.execute-api.us-east-1.amazonaws.com",
+        "THANOS_USER_POOL_ID": "us-east-1_XXXXX",
+        "THANOS_CLIENT_ID": "abc123def456",
+        "THANOS_EMAIL": "mcp-service@yourdomain.com",
+        "THANOS_PASSWORD": "your-secure-password"
+      }
+    }
+  }
+}
