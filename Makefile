@@ -113,6 +113,12 @@ package-lambdas:
 	@cp lambdas/groups_handler/app.py dist/groups_handler_build/
 	@cd dist/groups_handler_build && zip -r ../groups_handler.zip . -q
 	@rm -rf dist/groups_handler_build
+
+	@echo "Packaging public_config_handler..."
+	@mkdir -p dist/public_config_handler_build
+	@cp lambdas/public_config_handler/app.py dist/public_config_handler_build/
+	@cd dist/public_config_handler_build && zip -r ../public_config_handler.zip . -q
+	@rm -rf dist/public_config_handler_build
 	
 	@echo "Lambda packages created in dist/"
 

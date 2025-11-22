@@ -19,7 +19,29 @@ resource "aws_apigatewayv2_stage" "main" {
   name        = "$default"
   auto_deploy = true
 
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      errorMessage   = "$context.error.message"
+      integrationError = "$context.integrationErrorMessage"
+    })
+  }
+
   tags = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway" {
+  name              = "/aws/apigateway/${local.name_prefix}"
+  retention_in_days = 7
+  tags              = local.common_tags
 }
 
 # Lambda integration for scan handler
@@ -212,6 +234,33 @@ resource "aws_lambda_permission" "metrics" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.metrics_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+# Lambda integration for public config handler
+resource "aws_apigatewayv2_integration" "public_config" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = aws_lambda_function.public_config_handler.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "public_config" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /config/public"
+  target    = "integrations/${aws_apigatewayv2_integration.public_config.id}"
+  
+  # No authorization required for public config
+  authorization_type = "NONE"
+}
+
+resource "aws_lambda_permission" "public_config" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.public_config_handler.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

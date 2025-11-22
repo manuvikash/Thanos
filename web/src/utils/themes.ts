@@ -30,7 +30,7 @@ export const themes: Theme[] = [
   },
 ];
 
-export const defaultTheme = themes[0];
+export const defaultTheme = themes[2]; // Teal Dark as default
 
 /**
  * Theme CSS Variables Definition

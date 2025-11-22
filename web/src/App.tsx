@@ -16,7 +16,6 @@ import { SidebarInset } from './components/ui/sidebar'
 import CustomerOnboarding from './pages/CustomerOnboarding'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Login'
-import { RulesPage } from './pages/RulesPage'
 import ConfigManagement from './pages/ConfigManagement'
 import { configureAuth } from './utils/auth'
 import { RequireAuth } from './components/auth/RequireAuth'
@@ -88,7 +87,7 @@ function App() {
                 <AppLayout>
                   <AppSidebar />
 
-                  <SidebarInset className="relative">
+                  <SidebarInset className="relative overflow-x-hidden">
                     {/* Background decorative sphere - theme-aware */}
                     <BackgroundSphere />
 
@@ -110,6 +109,7 @@ function App() {
                   tenantId={tenantId}
                   findings={findings}
                   loading={loading}
+                  snapshotKey={snapshotKey}
                   onScanComplete={handleScanComplete}
                   onScanError={handleScanError}
                   onLoadingChange={setLoading}
@@ -124,6 +124,7 @@ function App() {
                   tenantId={tenantId}
                   findings={findings}
                   loading={loading}
+                  snapshotKey={snapshotKey}
                   onScanComplete={handleScanComplete}
                   onScanError={handleScanError}
                   onLoadingChange={setLoading}
@@ -138,6 +139,7 @@ function App() {
                   tenantId={tenantId}
                   findings={findings}
                   loading={loading}
+                  snapshotKey={snapshotKey}
                   onScanComplete={handleScanComplete}
                   onScanError={handleScanError}
                   onLoadingChange={setLoading}
@@ -152,6 +154,7 @@ function App() {
                   tenantId={tenantId}
                   findings={findings}
                   loading={loading}
+                  snapshotKey={snapshotKey}
                   onScanComplete={handleScanComplete}
                   onScanError={handleScanError}
                   onLoadingChange={setLoading}
@@ -168,6 +171,7 @@ function App() {
                   tenantId={tenantId}
                   findings={findings}
                   loading={loading}
+                  snapshotKey={snapshotKey}
                   onScanComplete={handleScanComplete}
                   onScanError={handleScanError}
                   onLoadingChange={setLoading}
@@ -175,9 +179,6 @@ function App() {
                 />
               }
             />
-
-            {/* Rules Management route */}
-            <Route path={ROUTES.RULES} element={<RulesPage />} />
 
             {/* Configuration Management route */}
             <Route path={ROUTES.CONFIG} element={<ConfigManagement />} />

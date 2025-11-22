@@ -1,6 +1,5 @@
 import React from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { ThemeSelector } from '@/components/ThemeSelector';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { signOut } from 'aws-amplify/auth';
@@ -29,7 +28,6 @@ export const Header: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <ThemeSelector />
           <Button
             variant="ghost"
             onClick={handleSignOut}

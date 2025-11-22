@@ -60,11 +60,6 @@ const navigationItems: NavigationItem[] = [
     icon: Table,
   },
   {
-    title: 'Rules',
-    url: ROUTES.RULES,
-    icon: FileCode,
-  },
-  {
     title: 'Configuration',
     url: ROUTES.CONFIG,
     icon: Settings,

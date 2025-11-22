@@ -159,6 +159,7 @@ def convert_dynamodb_to_dict(items: List[Dict[str, Any]]) -> List[Dict[str, Any]
     """
     Convert DynamoDB items to clean dictionary format.
     Removes internal keys like PK, SK, GSI keys.
+    Maps resource_arn back to arn for API compatibility.
     
     Args:
         items: List of DynamoDB items
@@ -171,9 +172,15 @@ def convert_dynamodb_to_dict(items: List[Dict[str, Any]]) -> List[Dict[str, Any]
     
     for item in items:
         clean_item = {k: v for k, v in item.items() if k not in internal_keys}
+        
+        # Map resource_arn to arn for API compatibility
+        if 'resource_arn' in clean_item:
+            clean_item['arn'] = clean_item.pop('resource_arn')
+        
         # Convert Decimal to float for drift_score
         if 'drift_score' in clean_item:
             clean_item['drift_score'] = float(clean_item['drift_score'])
+        
         cleaned.append(clean_item)
     
     return cleaned

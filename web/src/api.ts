@@ -313,6 +313,11 @@ export interface DashboardMetrics {
   timeline: TimelinePoint[];
 }
 
+export interface PublicConfig {
+  trusted_account_id: string;
+  cloudformation_template_url: string;
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
   let token = '';
   try {
@@ -718,4 +723,8 @@ export async function deleteResourceGroup(groupId: string, tenantId?: string): P
   return fetchAPI(url, {
     method: 'DELETE',
   });
+}
+
+export async function getPublicConfig(): Promise<PublicConfig> {
+  return fetchAPI('/config/public');
 }

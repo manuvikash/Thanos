@@ -133,45 +133,46 @@ export default function ResourcesTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedResources.map((resource) => {
-            const shortName = resource.arn.split('/').pop() || 
-                            resource.arn.split(':').pop() || 
-                            resource.arn
-            const driftPercentage = (resource.drift_score * 100).toFixed(1)
+          {sortedResources.map((resource, index) => {
+            const arn = resource.arn || 'unknown'
+            const shortName = arn.split('/').pop() || 
+                            arn.split(':').pop() || 
+                            arn
+            const driftPercentage = ((resource.drift_score || 0) * 100).toFixed(1)
 
             return (
               <TableRow
-                key={resource.arn}
+                key={resource.arn || `resource-${index}`}
                 className={onResourceClick ? 'cursor-pointer hover:bg-accent/50' : ''}
                 onClick={() => onResourceClick?.(resource)}
               >
                 <TableCell className="font-medium">
                   <span className="text-xs text-muted-foreground">
-                    {resource.resource_type.replace('AWS::', '')}
+                    {(resource.resource_type || 'UNKNOWN').replace('AWS::', '')}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="font-mono text-sm" title={resource.arn}>
+                  <span className="font-mono text-sm" title={arn}>
                     {shortName}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-muted-foreground">
-                    {resource.region}
+                    {resource.region || 'N/A'}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getComplianceBadgeVariant(resource.compliance_status)}>
-                    {resource.compliance_status}
+                  <Badge variant={getComplianceBadgeVariant(resource.compliance_status || 'NOT_EVALUATED')}>
+                    {resource.compliance_status || 'NOT_EVALUATED'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <span className={`font-semibold ${getDriftColor(resource.drift_score)}`}>
+                  <span className={`font-semibold ${getDriftColor(resource.drift_score || 0)}`}>
                     {driftPercentage}%
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  {resource.findings_count > 0 ? (
+                  {(resource.findings_count || 0) > 0 ? (
                     <Badge variant="destructive">{resource.findings_count}</Badge>
                   ) : (
                     <span className="text-green-600 dark:text-green-400">✓</span>

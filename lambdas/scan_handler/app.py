@@ -6,7 +6,9 @@ import json
 import os
 import boto3
 import sys
+import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict
 
 # Add common to path
@@ -22,10 +24,17 @@ from common.logging import get_logger, log_context
 
 logger = get_logger(__name__)
 
+
+def decimal_default(obj):
+    """Convert Decimal to float for JSON serialization."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 # Environment variables
 SNAPSHOTS_BUCKET = os.environ.get("SNAPSHOTS_BUCKET", "")
 RULES_BUCKET = os.environ.get("RULES_BUCKET", "")
-RULES_TABLE = os.environ.get("RULES_TABLE", "")
+BASE_CONFIGS_TABLE = os.environ.get("BASE_CONFIGS_TABLE", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
 RESOURCES_TABLE = os.environ.get("RESOURCES_TABLE", "")
 SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
@@ -166,7 +175,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         evaluated_resources, findings = evaluate_resources(
             tenant_id=tenant_id,
             resources=resources,
-            table_name=RULES_TABLE
+            table_name=BASE_CONFIGS_TABLE
         )
         log_context(
             logger,
@@ -233,7 +242,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
             },
-            "body": json.dumps(response_body),
+            "body": json.dumps(response_body, default=decimal_default),
         }
         
     except Exception as e:

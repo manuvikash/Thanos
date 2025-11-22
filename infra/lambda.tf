@@ -70,8 +70,8 @@ resource "aws_iam_role_policy" "scan_handler" {
           "dynamodb:GetItem"
         ]
         Resource = [
-          aws_dynamodb_table.rules.arn,
-          "${aws_dynamodb_table.rules.arn}/index/*"
+          aws_dynamodb_table.base_configs.arn,
+          "${aws_dynamodb_table.base_configs.arn}/index/*"
         ]
       },
       {
@@ -126,12 +126,12 @@ resource "aws_lambda_function" "scan_handler" {
 
   environment {
     variables = {
-      SNAPSHOTS_BUCKET = aws_s3_bucket.snapshots.id
-      RULES_BUCKET     = aws_s3_bucket.rules.id
-      RULES_TABLE      = aws_dynamodb_table.rules.name
-      FINDINGS_TABLE   = aws_dynamodb_table.findings.name
-      RESOURCES_TABLE  = aws_dynamodb_table.resources_inventory.name
-      ALERTS_TOPIC_ARN = aws_sns_topic.critical_findings_alerts.arn
+      SNAPSHOTS_BUCKET   = aws_s3_bucket.snapshots.id
+      RULES_BUCKET       = aws_s3_bucket.rules.id
+      BASE_CONFIGS_TABLE = aws_dynamodb_table.base_configs.name
+      FINDINGS_TABLE     = aws_dynamodb_table.findings.name
+      RESOURCES_TABLE    = aws_dynamodb_table.resources_inventory.name
+      ALERTS_TOPIC_ARN   = aws_sns_topic.critical_findings_alerts.arn
     }
   }
 
@@ -383,6 +383,73 @@ resource "aws_lambda_function" "metrics_handler" {
 
 resource "aws_cloudwatch_log_group" "metrics_handler" {
   name              = "/aws/lambda/${aws_lambda_function.metrics_handler.function_name}"
+  retention_in_days = 7
+
+  tags = local.common_tags
+}
+
+# IAM role for public config handler
+resource "aws_iam_role" "public_config_handler" {
+  name = "${local.name_prefix}-public-config-handler"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy" "public_config_handler" {
+  name = "public-config-handler-policy"
+  role = aws_iam_role.public_config_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_function" "public_config_handler" {
+  filename         = "../dist/public_config_handler.zip"
+  function_name    = "${local.name_prefix}-public-config-handler"
+  role             = aws_iam_role.public_config_handler.arn
+  handler          = "app.lambda_handler"
+  source_code_hash = fileexists("../dist/public_config_handler.zip") ? filebase64sha256("../dist/public_config_handler.zip") : null
+  runtime          = "python3.11"
+  timeout          = 30
+  memory_size      = 128
+
+  environment {
+    variables = {
+      TRUSTED_ACCOUNT_ID          = data.aws_caller_identity.current.account_id
+      CLOUDFORMATION_TEMPLATE_URL = "https://${aws_s3_bucket.rules.bucket}.s3.amazonaws.com/templates/customer-onboarding-role.yaml"
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "public_config_handler" {
+  name              = "/aws/lambda/${aws_lambda_function.public_config_handler.function_name}"
   retention_in_days = 7
 
   tags = local.common_tags

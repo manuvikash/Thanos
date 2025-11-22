@@ -12,7 +12,6 @@ S3_SECURE_TEMPLATE = ConfigTemplate(
     resource_type="AWS::S3::Bucket",
     description="Basic security configuration for S3 buckets with public access blocked and AES256 encryption",
     category="security",
-    tags=["s3", "security", "encryption"],
     desired_config={
         "PublicAccessBlockConfiguration": {
             "BlockPublicAcls": True,
@@ -37,7 +36,6 @@ S3_PRODUCTION_TEMPLATE = ConfigTemplate(
     resource_type="AWS::S3::Bucket",
     description="Production-grade S3 configuration with KMS encryption, versioning, and lifecycle policies",
     category="security",
-    tags=["s3", "production", "compliance"],
     desired_config={
         "PublicAccessBlockConfiguration": {
             "BlockPublicAcls": True,
@@ -75,7 +73,6 @@ IAM_LEAST_PRIVILEGE_TEMPLATE = ConfigTemplate(
     resource_type="AWS::IAM::Policy",
     description="IAM policy template enforcing least privilege - no wildcard actions or sensitive operations",
     category="security",
-    tags=["iam", "security", "least-privilege"],
     desired_config={
         "PolicyDocument": {
             "Version": "2012-10-17",
@@ -91,7 +88,6 @@ SG_RESTRICTED_TEMPLATE = ConfigTemplate(
     resource_type="AWS::EC2::SecurityGroup",
     description="Security group with no SSH/RDP from internet, restricted to internal networks",
     category="security",
-    tags=["security-group", "network", "security"],
     desired_config={
         "IpPermissions": []
     }
@@ -104,7 +100,6 @@ EC2_SECURE_TEMPLATE = ConfigTemplate(
     resource_type="AWS::EC2::Instance",
     description="Secure EC2 instance configuration with IMDSv2, EBS encryption, and monitoring",
     category="security",
-    tags=["ec2", "security"],
     desired_config={
         "MetadataOptions": {
             "HttpTokens": "required",
@@ -123,7 +118,6 @@ RDS_SECURE_TEMPLATE = ConfigTemplate(
     resource_type="AWS::RDS::DBInstance",
     description="Secure RDS configuration with encryption, automated backups, and private access",
     category="security",
-    tags=["rds", "database", "security"],
     desired_config={
         "StorageEncrypted": True,
         "BackupRetentionPeriod": 7,
@@ -140,7 +134,6 @@ LAMBDA_SECURE_TEMPLATE = ConfigTemplate(
     resource_type="AWS::Lambda::Function",
     description="Secure Lambda configuration with environment encryption and VPC access",
     category="security",
-    tags=["lambda", "security"],
     desired_config={
         "TracingConfig": {
             "Mode": "Active"

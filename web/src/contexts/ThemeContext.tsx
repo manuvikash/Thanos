@@ -15,16 +15,9 @@ const THEME_STORAGE_KEY = 'thanos_theme';
  * Get saved theme from localStorage
  */
 function getSavedTheme(): Theme {
-  try {
-    const savedThemeId = localStorage.getItem(THEME_STORAGE_KEY);
-    if (savedThemeId) {
-      const theme = themes.find(t => t.id === savedThemeId);
-      if (theme) return theme;
-    }
-  } catch (error) {
-    console.error('Failed to load saved theme:', error);
-  }
-  return defaultTheme;
+  // Enforce Teal Dark theme
+  const tealDark = themes.find(t => t.id === 'teal-dark');
+  return tealDark || defaultTheme;
 }
 
 /**

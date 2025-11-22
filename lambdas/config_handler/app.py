@@ -4,6 +4,7 @@ Lambda handler for base configuration management.
 import json
 import os
 from typing import Dict, Any
+from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
 
@@ -25,6 +26,13 @@ base_configs_table_name = os.environ.get('BASE_CONFIGS_TABLE', 'cloud-golden-gua
 base_configs_table = dynamodb.Table(base_configs_table_name)
 
 
+def decimal_default(obj):
+    """JSON serializer for objects not serializable by default json code."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 def get_cors_headers() -> Dict[str, str]:
     """Get CORS headers for responses."""
     return {
@@ -39,7 +47,7 @@ def response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'statusCode': status_code,
         'headers': get_cors_headers(),
-        'body': json.dumps(body)
+        'body': json.dumps(body, default=decimal_default)
     }
 
 
@@ -127,13 +135,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 def list_base_configs() -> Dict[str, Any]:
     """List all base configurations."""
     try:
-        response = base_configs_table.scan(
+        scan_response = base_configs_table.scan(
             FilterExpression='begins_with(PK, :pk)',
             ExpressionAttributeValues={':pk': 'BASE_CONFIG#'}
         )
         
         configs = []
-        for item in response.get('Items', []):
+        for item in scan_response.get('Items', []):
             try:
                 config = BaseConfig.from_dynamodb(item)
                 configs.append({
@@ -147,56 +155,41 @@ def list_base_configs() -> Dict[str, Any]:
             except Exception as e:
                 logger.warning(f"Error parsing base config: {e}")
         
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'configs': configs})
-        }
+        return response(200, {'configs': configs})
     
     except Exception as e:
         logger.error(f"Error listing base configs: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
-        }
+        return response(500, {'error': str(e)})
 
 
 def get_base_config(resource_type: str) -> Dict[str, Any]:
     """Get base configuration for a resource type."""
     try:
-        response = base_configs_table.get_item(
+        db_response = base_configs_table.get_item(
             Key={
                 'PK': f'BASE_CONFIG#{resource_type}',
                 'SK': 'v1'
             }
         )
         
-        item = response.get('Item')
+        item = db_response.get('Item')
         if not item:
-            return {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'Base config not found'})
-            }
+            return response(404, {'error': 'Base config not found'})
         
         config = BaseConfig.from_dynamodb(item)
         
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'resource_type': config.resource_type,
-                'desired_config': config.desired_config,
-                'version': config.version,
-                'editable': config.editable,
-                'created_at': config.created_at,
-                'updated_at': config.updated_at
-            })
-        }
+        return response(200, {
+            'resource_type': config.resource_type,
+            'desired_config': config.desired_config,
+            'version': config.version,
+            'editable': config.editable,
+            'created_at': config.created_at,
+            'updated_at': config.updated_at
+        })
     
     except Exception as e:
         logger.error(f"Error getting base config: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
-        }
+        return response(500, {'error': str(e)})
 
 
 def create_or_update_base_config(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -206,10 +199,7 @@ def create_or_update_base_config(data: Dict[str, Any]) -> Dict[str, Any]:
         desired_config = data.get('desired_config', {})
         
         if not resource_type:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({'error': 'resource_type is required'})
-            }
+            return response(400, {'error': 'resource_type is required'})
         
         base_config = BaseConfig(
             resource_type=resource_type,
@@ -222,20 +212,14 @@ def create_or_update_base_config(data: Dict[str, Any]) -> Dict[str, Any]:
         
         logger.info(f"Created/updated base config for {resource_type}")
         
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Base config saved successfully',
-                'resource_type': resource_type
-            })
-        }
+        return response(200, {
+            'message': 'Base config saved successfully',
+            'resource_type': resource_type
+        })
     
     except Exception as e:
         logger.error(f"Error creating/updating base config: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
-        }
+        return response(500, {'error': str(e)})
 
 
 def delete_base_config(resource_type: str) -> Dict[str, Any]:
@@ -250,17 +234,11 @@ def delete_base_config(resource_type: str) -> Dict[str, Any]:
         
         logger.info(f"Deleted base config for {resource_type}")
         
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Base config deleted successfully'})
-        }
+        return response(200, {'message': 'Base config deleted successfully'})
     
     except Exception as e:
         logger.error(f"Error deleting base config: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
-        }
+        return response(500, {'error': str(e)})
 
 
 def list_templates() -> Dict[str, Any]:

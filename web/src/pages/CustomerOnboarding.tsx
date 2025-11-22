@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
-import { verifyAndRegisterCustomer } from '../api';
+import { verifyAndRegisterCustomer, getPublicConfig } from '../api';
 
 const AWS_REGIONS = [
   'us-east-1',
@@ -33,10 +33,6 @@ const AWS_REGIONS = [
   'sa-east-1',
 ];
 
-// Get configuration from environment variables
-const TRUSTED_ACCOUNT_ID = import.meta.env.VITE_TRUSTED_ACCOUNT_ID;
-const CLOUDFORMATION_TEMPLATE_URL = import.meta.env.VITE_CLOUDFORMATION_TEMPLATE_URL;
-
 // Note: We use S3 with region-agnostic endpoint (s3.amazonaws.com) so it works across all regions
 
 export default function CustomerOnboarding() {
@@ -47,6 +43,19 @@ export default function CustomerOnboarding() {
     success: boolean;
     message: string;
   } | null>(null);
+  const [config, setConfig] = useState<{ trusted_account_id: string; cloudformation_template_url: string } | null>(null);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const publicConfig = await getPublicConfig();
+        setConfig(publicConfig);
+      } catch (error) {
+        console.error('Failed to fetch public config:', error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const handleCreateRole = () => {
     // Validate account ID
@@ -56,19 +65,19 @@ export default function CustomerOnboarding() {
     }
 
     // Validate configuration
-    if (!TRUSTED_ACCOUNT_ID) {
+    if (!config?.trusted_account_id) {
       alert('Trusted account ID is not configured. Please check your environment configuration.');
       return;
     }
 
-    if (!CLOUDFORMATION_TEMPLATE_URL) {
+    if (!config?.cloudformation_template_url) {
       alert('CloudFormation template URL is not configured. Please check your environment configuration.');
       return;
     }
 
     // Build the CloudFormation console URL with S3 template URL
     // Using region-agnostic S3 endpoint (s3.amazonaws.com) works across all regions
-    const cfnUrl = `https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/create/review?stackName=CloudGoldenGuardAuditRole&templateURL=${encodeURIComponent(CLOUDFORMATION_TEMPLATE_URL)}&param_TrustedAccountId=${TRUSTED_ACCOUNT_ID}`;
+    const cfnUrl = `https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/create/review?stackName=CloudGoldenGuardAuditRole&templateURL=${encodeURIComponent(config.cloudformation_template_url)}&param_TrustedAccountId=${config.trusted_account_id}`;
 
     // Open in new tab
     window.open(cfnUrl, '_blank');

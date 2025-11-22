@@ -14,6 +14,7 @@ interface ContentAreaProps {
   tenantId: string
   findings: Finding[]
   loading: boolean
+  snapshotKey: string
   onScanComplete: (
     findings: Finding[],
     stats: { resources: number; findings: number },
@@ -29,6 +30,7 @@ export function ContentArea({
   tenantId,
   findings,
   loading,
+  snapshotKey,
   onScanComplete: originalOnScanComplete,
   onScanError,
   onLoadingChange,
@@ -163,6 +165,7 @@ export function ContentArea({
             findings={findings}
             tenantId={tenantId}
             loading={loading}
+            snapshotKey={snapshotKey}
           />
         )
       default:

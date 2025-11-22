@@ -180,7 +180,8 @@ export default function BaseConfigs() {
         const templates = getTemplatesForResourceType(selectedType);
         const template = templates[parseInt(templateIndex)];
         if (template) {
-          setConfigJson(JSON.stringify(template.desired_config, null, 2));
+          // Built-in templates use 'config' property, not 'desired_config'
+          setConfigJson(JSON.stringify(template.config, null, 2));
         }
       }
     }

@@ -5,6 +5,7 @@ Retrieves findings from DynamoDB.
 import json
 import os
 import sys
+from decimal import Decimal
 from typing import Any, Dict
 
 # Add common to path
@@ -17,6 +18,13 @@ logger = get_logger(__name__)
 
 # Environment variables
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
+
+
+def decimal_default(obj):
+    """Convert Decimal to float for JSON serialization."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -78,7 +86,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
             },
-            "body": json.dumps(response_body),
+            "body": json.dumps(response_body, default=decimal_default),
         }
         
     except Exception as e:
