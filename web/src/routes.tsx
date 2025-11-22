@@ -3,12 +3,7 @@
  */
 export const ROUTES = {
   ROOT: '/',
-  DASHBOARD: {
-    OVERVIEW_METRICS: '/dashboard/overview-metrics',
-    SEVERITY_DISTRIBUTION: '/dashboard/severity-distribution',
-    TOP_FAILING_RULES: '/dashboard/top-failing-rules',
-    FINDINGS_TIMELINE: '/dashboard/findings-timeline',
-  },
+  DASHBOARD: '/dashboard',
   FINDINGS: '/findings',
   CONFIG: '/config',
   REGISTER: '/register',
@@ -25,5 +20,5 @@ export const isDashboardRoute = (path: string): boolean => {
  * Get the default dashboard route
  */
 export const getDefaultDashboardRoute = (): string => {
-  return ROUTES.DASHBOARD.OVERVIEW_METRICS
+  return ROUTES.DASHBOARD
 }

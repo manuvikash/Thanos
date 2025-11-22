@@ -1,10 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import HorizontalScanBar from './HorizontalScanBar'
-import { OverviewMetricsSection } from './OverviewMetricsSection'
-import { SeverityDistributionSection } from './SeverityDistributionSection'
-import { TopFailingRulesSection } from './TopFailingRulesSection'
-import { FindingsTimelineSection } from './FindingsTimelineSection'
+import { DashboardView } from './DashboardView'
 import { FindingsTableSection } from './FindingsTableSection'
 import { Finding } from '../api'
 import { ROUTES } from '../routes'
@@ -114,63 +111,31 @@ export function ContentArea({
   const renderSection = () => {
     const path = location.pathname
 
-    switch (path) {
-      case ROUTES.DASHBOARD.OVERVIEW_METRICS:
-        return (
-          <OverviewMetricsSection
-            tenantId={tenantId}
-            metrics={metrics}
-            loading={metricsLoading}
-            error={metricsError}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshMetrics}
-          />
-        )
-      case ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION:
-        return (
-          <SeverityDistributionSection
-            tenantId={tenantId}
-            metrics={metrics}
-            loading={metricsLoading}
-            error={metricsError}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshMetrics}
-          />
-        )
-      case ROUTES.DASHBOARD.TOP_FAILING_RULES:
-        return (
-          <TopFailingRulesSection
-            tenantId={tenantId}
-            metrics={metrics}
-            loading={metricsLoading}
-            error={metricsError}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshMetrics}
-          />
-        )
-      case ROUTES.DASHBOARD.FINDINGS_TIMELINE:
-        return (
-          <FindingsTimelineSection
-            tenantId={tenantId}
-            metrics={metrics}
-            loading={metricsLoading}
-            error={metricsError}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshMetrics}
-          />
-        )
-      case ROUTES.FINDINGS:
-        return (
-          <FindingsTableSection
-            findings={findings}
-            tenantId={tenantId}
-            loading={loading}
-            snapshotKey={snapshotKey}
-          />
-        )
-      default:
-        return null
+    if (path === ROUTES.DASHBOARD) {
+      return (
+        <DashboardView
+          tenantId={tenantId}
+          metrics={metrics}
+          loading={metricsLoading}
+          error={metricsError}
+          lastUpdated={lastUpdated}
+          onRefresh={() => refreshMetrics(tenantId)}
+        />
+      )
     }
+
+    if (path === ROUTES.FINDINGS) {
+      return (
+        <FindingsTableSection
+          findings={findings}
+          tenantId={tenantId}
+          loading={loading}
+          snapshotKey={snapshotKey}
+        />
+      )
+    }
+
+    return null
   }
 
   return (

@@ -27,13 +27,13 @@ export function LoginForm() {
             if (newPasswordRequired) {
                 const { isSignedIn } = await confirmSignIn({ challengeResponse: newPassword });
                 if (isSignedIn) {
-                    navigate(ROUTES.DASHBOARD.OVERVIEW_METRICS);
+                    navigate(ROUTES.DASHBOARD);
                 }
             } else {
                 const { isSignedIn, nextStep } = await signIn({ username: email, password });
 
                 if (isSignedIn) {
-                    navigate(ROUTES.DASHBOARD.OVERVIEW_METRICS);
+                    navigate(ROUTES.DASHBOARD);
                 } else if (nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
                     setNewPasswordRequired(true);
                     setError('');

@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table'
-import { Button } from './ui/button'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface ResourcesTableProps {

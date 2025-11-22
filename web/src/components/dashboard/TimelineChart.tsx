@@ -1,133 +1,69 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { TimelinePoint } from '@/api'
-import { AreaChart, Area, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis } from 'recharts'
 
 interface TimelineChartProps {
   timeline: TimelinePoint[]
 }
 
 const chartConfig = {
-  CRITICAL: {
-    label: 'Critical',
-    color: 'hsl(0, 84%, 60%)',
-  },
-  HIGH: {
-    label: 'High',
-    color: 'hsl(25, 95%, 53%)',
-  },
-  MEDIUM: {
-    label: 'Medium',
-    color: 'hsl(45, 93%, 47%)',
-  },
-  LOW: {
-    label: 'Low',
-    color: 'hsl(217, 91%, 60%)',
+  total: {
+    label: 'Total Findings',
+    color: 'hsl(var(--primary))',
   },
 }
 
 export function TimelineChart({ timeline }: TimelineChartProps) {
-  // Format timestamp for display
-  const formatTimestamp = (timestamp: string): string => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) {
-      return 'Today'
-    } else if (diffDays === 1) {
-      return 'Yesterday'
-    } else if (diffDays < 7) {
-      return `${diffDays}d ago`
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    }
-  }
-
-  // Transform data for Recharts
-  const chartData = timeline.map((point) => ({
-    timestamp: formatTimestamp(point.timestamp),
-    CRITICAL: point.severity_counts.CRITICAL || 0,
-    HIGH: point.severity_counts.HIGH || 0,
-    MEDIUM: point.severity_counts.MEDIUM || 0,
-    LOW: point.severity_counts.LOW || 0,
-    total: point.total,
+  // Format dates for display
+  const data = timeline.map(point => ({
+    ...point,
+    date: new Date(point.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    fullDate: new Date(point.timestamp).toLocaleString()
   }))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Findings Timeline</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[500px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="timestamp"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                className="text-xs"
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                className="text-xs"
-              />
-              <ChartTooltip
-                content={<ChartTooltipContent />}
-              />
-              <Area
-                type="monotone"
-                dataKey="CRITICAL"
-                stackId="1"
-                stroke={chartConfig.CRITICAL.color}
-                fill={chartConfig.CRITICAL.color}
-                fillOpacity={0.7}
-                animationDuration={800}
-                animationEasing="ease-in-out"
-              />
-              <Area
-                type="monotone"
-                dataKey="HIGH"
-                stackId="1"
-                stroke={chartConfig.HIGH.color}
-                fill={chartConfig.HIGH.color}
-                fillOpacity={0.7}
-                animationDuration={800}
-                animationEasing="ease-in-out"
-              />
-              <Area
-                type="monotone"
-                dataKey="MEDIUM"
-                stackId="1"
-                stroke={chartConfig.MEDIUM.color}
-                fill={chartConfig.MEDIUM.color}
-                fillOpacity={0.7}
-                animationDuration={800}
-                animationEasing="ease-in-out"
-              />
-              <Area
-                type="monotone"
-                dataKey="LOW"
-                stackId="1"
-                stroke={chartConfig.LOW.color}
-                fill={chartConfig.LOW.color}
-                fillOpacity={0.7}
-                animationDuration={800}
-                animationEasing="ease-in-out"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <AreaChart
+        accessibilityLayer
+        data={data}
+        margin={{
+          left: 12,
+          right: 12,
+        }}
+      >
+        <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.2} />
+        <XAxis
+          dataKey="date"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tickFormatter={(value) => value}
+        />
+        <YAxis 
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+        />
+        <ChartTooltip
+          cursor={false}
+          content={<ChartTooltipContent indicator="dot" />}
+        />
+        <defs>
+          <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
+          </linearGradient>
+        </defs>
+        <Area
+          dataKey="total"
+          type="monotone"
+          fill="url(#fillTotal)"
+          fillOpacity={0.4}
+          stroke="hsl(var(--primary))"
+          strokeWidth={2}
+          stackId="a"
+        />
+      </AreaChart>
+    </ChartContainer>
   )
 }

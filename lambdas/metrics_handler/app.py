@@ -102,24 +102,25 @@ def aggregate_metrics(findings: List[Dict[str, Any]], limit: int = 5) -> Dict[st
             "total_findings": previous_scan["total"],
         }
     
-    # Calculate top 5 rules by finding count (from current scan)
-    rule_counts = defaultdict(lambda: {"count": 0, "severity": ""})
+    # Calculate top 5 resource types by finding count (from current scan)
+    resource_counts = defaultdict(lambda: {"count": 0, "severity": "MEDIUM"})
     for finding in current_scan["findings"]:
-        rule_id = finding.get("rule_id", "")
-        severity = finding.get("severity", "")
-        rule_counts[rule_id]["count"] += 1
-        # Use the first severity we see (they should all be the same for a rule)
-        if not rule_counts[rule_id]["severity"]:
-            rule_counts[rule_id]["severity"] = severity
+        resource_type = finding.get("resource_type", "Unknown")
+        severity = finding.get("severity", "MEDIUM")
+        resource_counts[resource_type]["count"] += 1
+        # Keep track of highest severity for this resource type
+        current_sev = resource_counts[resource_type]["severity"]
+        if severity == "CRITICAL" or (severity == "HIGH" and current_sev != "CRITICAL"):
+            resource_counts[resource_type]["severity"] = severity
     
-    top_rules = [
+    top_resources = [
         {
-            "rule_id": rule_id,
+            "resource_type": r_type,
             "count": data["count"],
             "severity": data["severity"],
         }
-        for rule_id, data in sorted(
-            rule_counts.items(),
+        for r_type, data in sorted(
+            resource_counts.items(),
             key=lambda x: x[1]["count"],
             reverse=True
         )[:5]
@@ -139,7 +140,7 @@ def aggregate_metrics(findings: List[Dict[str, Any]], limit: int = 5) -> Dict[st
     return {
         "current_scan": current_scan_data,
         "previous_scan": previous_scan_data,
-        "top_rules": top_rules,
+        "top_resources": top_resources,
         "timeline": timeline,
     }
 

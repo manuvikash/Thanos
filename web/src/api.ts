@@ -292,8 +292,8 @@ export interface PreviousScan {
   total_findings: number;
 }
 
-export interface TopRule {
-  rule_id: string;
+export interface TopResource {
+  resource_type: string;
   count: number;
   severity: string;
 }
@@ -309,7 +309,7 @@ export interface DashboardMetrics {
   tenant_id: string;
   current_scan: CurrentScan;
   previous_scan: PreviousScan | null;
-  top_rules: TopRule[];
+  top_resources: TopResource[];
   timeline: TimelinePoint[];
 }
 

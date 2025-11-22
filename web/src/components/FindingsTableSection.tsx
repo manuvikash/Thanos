@@ -64,7 +64,6 @@ export function FindingsTableSection({
     const compliantResources = resources.filter(r => 
       r.compliance_status === 'COMPLIANT' || r.compliance_status === 'NOT_EVALUATED'
     )
-    const totalResources = resources.length
     
     return (
       <div className="space-y-6">

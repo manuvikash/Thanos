@@ -112,7 +112,7 @@ export default function LandingPage() {
 
               {/* Admin Dashboard Card */}
               <Link
-                to={ROUTES.DASHBOARD.OVERVIEW_METRICS}
+                to={ROUTES.DASHBOARD}
                 className="group relative overflow-hidden bg-card border border-border hover:border-teal-500/50 rounded-xl p-8 transition-all duration-300 hover:shadow-[0_0_30px_-10px_rgba(20,184,166,0.3)] text-left"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

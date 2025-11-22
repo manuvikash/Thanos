@@ -103,52 +103,7 @@ function App() {
           >
             {/* Dashboard section routes */}
             <Route
-              path={ROUTES.DASHBOARD.OVERVIEW_METRICS}
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  snapshotKey={snapshotKey}
-                  onScanComplete={handleScanComplete}
-                  onScanError={handleScanError}
-                  onLoadingChange={setLoading}
-                  onReset={handleReset}
-                />
-              }
-            />
-            <Route
-              path={ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION}
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  snapshotKey={snapshotKey}
-                  onScanComplete={handleScanComplete}
-                  onScanError={handleScanError}
-                  onLoadingChange={setLoading}
-                  onReset={handleReset}
-                />
-              }
-            />
-            <Route
-              path={ROUTES.DASHBOARD.TOP_FAILING_RULES}
-              element={
-                <ContentArea
-                  tenantId={tenantId}
-                  findings={findings}
-                  loading={loading}
-                  snapshotKey={snapshotKey}
-                  onScanComplete={handleScanComplete}
-                  onScanError={handleScanError}
-                  onLoadingChange={setLoading}
-                  onReset={handleReset}
-                />
-              }
-            />
-            <Route
-              path={ROUTES.DASHBOARD.FINDINGS_TIMELINE}
+              path={ROUTES.DASHBOARD}
               element={
                 <ContentArea
                   tenantId={tenantId}

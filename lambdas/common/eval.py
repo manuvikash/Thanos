@@ -222,6 +222,7 @@ def evaluate_resource(resource: Resource, table_name: str) -> tuple:
             account_id=resource.account_id,
             region=resource.region,
             category="compliance",
+            snapshot_key=resource.snapshot_key,
             differences=differences,
             metadata={
                 "base_config_applied": resource.base_config_applied,

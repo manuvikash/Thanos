@@ -14,5 +14,6 @@ export function InvalidRouteHandler({ onInvalidRoute }: InvalidRouteHandlerProps
     onInvalidRoute(location.pathname)
   }, [location.pathname, onInvalidRoute])
 
-  return <Navigate to={ROUTES.DASHBOARD.OVERVIEW_METRICS} replace />
+  // Redirect to default dashboard route
+  return <Navigate to={ROUTES.DASHBOARD} replace />
 }

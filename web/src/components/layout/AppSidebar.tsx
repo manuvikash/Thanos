@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight, FileCode, LogOut, Home, Settings } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, LogOut, Home, Settings } from 'lucide-react'
 import { signOut } from 'aws-amplify/auth'
 import {
   Sidebar,
@@ -33,26 +33,8 @@ const navigationItems: NavigationItem[] = [
   },
   {
     title: 'Dashboard',
-    url: '/dashboard',
+    url: ROUTES.DASHBOARD,
     icon: LayoutDashboard,
-    items: [
-      {
-        title: 'Overview Metrics',
-        url: ROUTES.DASHBOARD.OVERVIEW_METRICS,
-      },
-      {
-        title: 'Severity Distribution',
-        url: ROUTES.DASHBOARD.SEVERITY_DISTRIBUTION,
-      },
-      {
-        title: 'Top Failing Rules',
-        url: ROUTES.DASHBOARD.TOP_FAILING_RULES,
-      },
-      {
-        title: 'Findings Timeline',
-        url: ROUTES.DASHBOARD.FINDINGS_TIMELINE,
-      },
-    ],
   },
   {
     title: 'Findings Table',
