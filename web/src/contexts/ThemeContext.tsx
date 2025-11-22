@@ -15,9 +15,18 @@ const THEME_STORAGE_KEY = 'thanos_theme';
  * Get saved theme from localStorage
  */
 function getSavedTheme(): Theme {
-  // Enforce Teal Dark theme
-  const tealDark = themes.find(t => t.id === 'teal-dark');
-  return tealDark || defaultTheme;
+  try {
+    const savedId = localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedId) {
+      const savedTheme = themes.find(t => t.id === savedId);
+      if (savedTheme) {
+        return savedTheme;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to read theme from storage:', error);
+  }
+  return defaultTheme;
 }
 
 /**
@@ -36,18 +45,18 @@ function saveTheme(themeId: string): void {
  */
 function applyTheme(themeId: string): void {
   const root = document.documentElement;
-  
+
   // Remove all theme classes
   themes.forEach(theme => {
     root.classList.remove(theme.cssClass);
   });
-  
+
   // Add the selected theme class
   const selectedTheme = themes.find(t => t.id === themeId);
   if (selectedTheme) {
     root.classList.add(selectedTheme.cssClass);
   }
-  
+
   // Apply CSS variables
   const variables = themeVariables[themeId as ThemeId];
   if (variables) {

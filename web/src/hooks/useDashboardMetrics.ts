@@ -69,7 +69,32 @@ export function useDashboardMetrics({ tenantId }: UseDashboardMetricsProps) {
             } catch (err) {
                 const errorMessage =
                     err instanceof Error ? err.message : 'Failed to load dashboard metrics'
-                setError(errorMessage)
+
+                // Handle 404 or "No findings" as a valid empty state
+                if (errorMessage.includes('404') || errorMessage.includes('No findings') || errorMessage.includes('No valid scan data')) {
+                    const emptyMetrics: DashboardMetrics = {
+                        tenant_id: effectiveTenantId,
+                        current_scan: {
+                            snapshot_key: '',
+                            timestamp: new Date().toISOString(),
+                            total_findings: 0,
+                            severity_counts: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
+                        },
+                        previous_scan: null,
+                        top_resources: [],
+                        timeline: []
+                    }
+                    setMetrics(emptyMetrics)
+                    setLastUpdated(new Date())
+                    // Cache the empty state too
+                    metricsCache.current = {
+                        tenantId: effectiveTenantId,
+                        data: emptyMetrics,
+                        timestamp: Date.now(),
+                    }
+                } else {
+                    setError(errorMessage)
+                }
             } finally {
                 setLoading(false)
             }

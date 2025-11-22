@@ -40,6 +40,7 @@ def assume_role(role_arn: str, session_name: str = "GoldenGuardScan") -> Optiona
             RoleArn=role_arn,
             RoleSessionName=session_name,
             DurationSeconds=3600,
+            ExternalId="cloud-golden-guard-audit",
         )
         
         credentials = response["Credentials"]
