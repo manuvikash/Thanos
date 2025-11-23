@@ -100,6 +100,16 @@ export function LoginForm() {
                                 required
                                 minLength={8}
                             />
+                            <div className="text-xs text-muted-foreground">
+                                Password requirements:
+                                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                                    <li>At least 8 characters</li>
+                                    <li>At least 1 number</li>
+                                    <li>At least 1 special character</li>
+                                    <li>At least 1 uppercase letter</li>
+                                    <li>At least 1 lowercase letter</li>
+                                </ul>
+                            </div>
                         </div>
                     )}
                 </CardContent>
