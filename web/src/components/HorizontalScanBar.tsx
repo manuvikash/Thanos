@@ -66,13 +66,13 @@ export default function HorizontalScanBar({
   const getStatusColor = () => {
     switch (status) {
       case 'ready':
-        return 'text-neutral-400'
+        return 'text-green-500'
       case 'scanning':
-        return 'text-cyan-400'
+        return 'text-primary'
       case 'complete':
-        return 'text-green-400'
+        return 'text-green-500'
       case 'error':
-        return 'text-red-400'
+        return 'text-destructive'
     }
   }
 
@@ -131,18 +131,18 @@ export default function HorizontalScanBar({
           </div>
 
           {/* Right group: Status and Progress */}
-          <div className="flex items-center gap-4 lg:border-l lg:border-neutral-700 lg:pl-4">
+          <div className="flex items-center gap-4 lg:border-l lg:border-border lg:pl-4">
             {/* Status Indicator */}
             <div className="flex items-center gap-2 min-w-[100px]">
               <div className="flex items-center gap-2">
                 <div
                   className={`w-2 h-2 rounded-full ${status === 'ready'
-                    ? 'bg-neutral-500'
+                    ? 'bg-green-500'
                     : status === 'scanning'
-                      ? 'bg-cyan-500 animate-pulse'
+                      ? 'bg-primary animate-pulse'
                       : status === 'complete'
                         ? 'bg-green-500'
-                        : 'bg-red-500'
+                        : 'bg-destructive'
                     }`}
                 />
                 <span className={`text-sm font-medium ${getStatusColor()}`}>
@@ -154,9 +154,9 @@ export default function HorizontalScanBar({
             {/* Progress Bar */}
             {status === 'scanning' && (
               <div className="flex-1 min-w-[120px] max-w-[200px]">
-                <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-cyan-500 transition-all duration-300 ease-out"
+                    className="h-full bg-primary transition-all duration-300 ease-out"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -167,7 +167,7 @@ export default function HorizontalScanBar({
 
         {/* Error Message */}
         {error && status === 'error' && (
-          <div className="mt-3 px-3 py-2 bg-red-900/30 border border-red-700/50 rounded-md text-red-300 text-sm">
+          <div className="mt-3 px-3 py-2 bg-destructive/10 border border-destructive/50 rounded-md text-destructive text-sm">
             {error}
           </div>
         )}
