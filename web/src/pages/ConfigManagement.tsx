@@ -2,7 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BaseConfigs from '@/components/config/BaseConfigs';
 import ResourceGroups from '@/components/config/ResourceGroups';
 import Templates from '@/components/config/Templates';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FileCode2, FolderTree, GitMerge, CheckCircle2 } from 'lucide-react';
 
 export default function ConfigManagement() {
   return (
@@ -14,26 +15,90 @@ export default function ConfigManagement() {
         </p>
       </div>
 
-      <Card className="mb-6 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-blue-900 dark:text-blue-100">How It Works</CardTitle>
+          <CardTitle>How It Works</CardTitle>
+          <CardDescription>
+            A hierarchical approach to managing AWS resource configurations
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-          <div className="flex items-start gap-2">
-            <span className="font-semibold min-w-[140px]">1. Base Config:</span>
-            <span>Define what ALL resources of a type should look like</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="font-semibold min-w-[140px]">2. Resource Groups:</span>
-            <span>Tag-based groups that add or override config (e.g., production buckets need versioning)</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="font-semibold min-w-[140px]">3. Automatic Merge:</span>
-            <span>System merges base + matching groups hierarchically</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="font-semibold min-w-[140px]">4. Compliance Check:</span>
-            <span>Compare actual resource config vs. desired config and report differences</span>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <FileCode2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Step 1</div>
+                    <CardTitle className="text-base">Base Config</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">
+                  Define what ALL resources of a type should look like
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <FolderTree className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Step 2</div>
+                    <CardTitle className="text-base">Resource Groups</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">
+                  Tag-based groups that add or override config (e.g., production buckets need versioning)
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <GitMerge className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Step 3</div>
+                    <CardTitle className="text-base">Automatic Merge</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">
+                  System merges base + matching groups hierarchically
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Step 4</div>
+                    <CardTitle className="text-base">Compliance Check</CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">
+                  Compare actual resource config vs. desired config and report differences
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
