@@ -30,6 +30,17 @@ import {
 import { Plus, Edit, Trash2, Save, FileText, Eye } from 'lucide-react';
 import { getTemplatesForResourceType, getSupportedResourceTypes } from '@/lib/baseConfigTemplates';
 import { getBaseConfigs, createBaseConfig, deleteBaseConfig, BaseConfig, getTemplatesByResourceType, createTemplate, ConfigTemplate } from '@/api';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 const AWS_RESOURCE_TYPES = getSupportedResourceTypes();
 
@@ -46,6 +57,8 @@ export default function BaseConfigs() {
   const [customTemplates, setCustomTemplates] = useState<ConfigTemplate[]>([]);
   const [viewingConfig, setViewingConfig] = useState<BaseConfig | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfigs();
@@ -154,14 +167,28 @@ export default function BaseConfigs() {
     }
   };
 
-  const handleDelete = async (resourceType: string) => {
-    if (!confirm(`Delete base config for ${resourceType}?`)) return;
+  const handleDeleteClick = (resourceType: string) => {
+    setConfigToDelete(resourceType);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!configToDelete) return;
 
     try {
-      await deleteBaseConfig(resourceType);
+      await deleteBaseConfig(configToDelete);
+      toast.success('Configuration deleted successfully', {
+        description: `Base config for ${configToDelete} has been removed.`,
+      });
       loadConfigs();
     } catch (error) {
       console.error('Failed to delete config:', error);
+      toast.error('Failed to delete configuration', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setConfigToDelete(null);
     }
   };
 
@@ -260,7 +287,7 @@ export default function BaseConfigs() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleDelete(config.resource_type)}
+                                    onClick={() => handleDeleteClick(config.resource_type)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -462,6 +489,25 @@ export default function BaseConfigs() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the base configuration for{' '}
+              <span className="font-mono font-semibold">{configToDelete}</span>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

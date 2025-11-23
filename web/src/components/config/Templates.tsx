@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, CheckCheck, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 import { getTemplates, createBaseConfig, ConfigTemplate } from '@/api';
 import {
   Dialog,
@@ -50,10 +51,10 @@ export default function Templates() {
         resource_type: template.resource_type,
         desired_config: template.desired_config,
       });
-      alert(`Created base config for ${template.resource_type} using ${template.name} template`);
+      toast.success(`Created base config for ${template.resource_type} using ${template.name} template`);
     } catch (error) {
       console.error('Failed to create base config:', error);
-      alert('Failed to create base config');
+      toast.error('Failed to create base config');
     }
   };
 
