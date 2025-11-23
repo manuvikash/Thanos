@@ -18,12 +18,24 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Templates() {
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<ConfigTemplate | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [templateToUse, setTemplateToUse] = useState<ConfigTemplate | null>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -45,16 +57,30 @@ export default function Templates() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const useAsBaseConfig = async (template: ConfigTemplate) => {
+  const handleUseTemplateClick = (template: ConfigTemplate) => {
+    setTemplateToUse(template);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmUseTemplate = async () => {
+    if (!templateToUse) return;
+
     try {
       await createBaseConfig({
-        resource_type: template.resource_type,
-        desired_config: template.desired_config,
+        resource_type: templateToUse.resource_type,
+        desired_config: templateToUse.desired_config,
       });
-      toast.success(`Created base config for ${template.resource_type} using ${template.name} template`);
+      toast.success('Base configuration created successfully', {
+        description: `Created base config for ${templateToUse.resource_type} using ${templateToUse.name} template`,
+      });
     } catch (error) {
       console.error('Failed to create base config:', error);
-      toast.error('Failed to create base config');
+      toast.error('Failed to create base configuration', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setConfirmDialogOpen(false);
+      setTemplateToUse(null);
     }
   };
 
@@ -143,7 +169,7 @@ export default function Templates() {
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => useAsBaseConfig(template)}
+                                onClick={() => handleUseTemplateClick(template)}
                                 className="flex-1"
                               >
                                 Use
@@ -185,6 +211,27 @@ export default function Templates() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Base Configuration?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a base configuration for{' '}
+              <span className="font-mono font-semibold">{templateToUse?.resource_type}</span>
+              {' '}using the template{' '}
+              <span className="font-semibold">{templateToUse?.name}</span>.
+              {' '}This configuration will apply to all resources of this type.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUseTemplate}>
+              Create Base Config
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
