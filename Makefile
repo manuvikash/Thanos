@@ -106,6 +106,18 @@ package-lambdas:
 	@cp lambdas/config_handler/app.py dist/config_handler_build/
 	@cd dist/config_handler_build && zip -r ../config_handler.zip . -q
 	@rm -rf dist/config_handler_build
+
+	@echo "Packaging mcp_keys_handler..."
+	@mkdir -p dist/mcp_keys_handler_build
+	@cp lambdas/mcp_keys_handler/app.py dist/mcp_keys_handler_build/
+	@cd dist/mcp_keys_handler_build && zip -r ../mcp_keys_handler.zip . -q
+	@rm -rf dist/mcp_keys_handler_build
+
+	@echo "Packaging mcp_server..."
+	@mkdir -p dist/mcp_server_build
+	@cp lambdas/mcp_server/server_hosted.py dist/mcp_server_build/
+	@cd dist/mcp_server_build && zip -r ../mcp_server.zip . -q
+	@rm -rf dist/mcp_server_build
 	
 	@echo "Packaging groups_handler..."
 	@mkdir -p dist/groups_handler_build
@@ -209,9 +221,17 @@ estimate-costs:
 
 update-web-env:
 	@echo "Updating web/.env with Terraform outputs..."
-	@echo "VITE_API_URL=$$(cd infra && terraform output -raw api_url)" > web/.env
-	@echo "VITE_COGNITO_USER_POOL_ID=$$(cd infra && terraform output -raw cognito_user_pool_id)" >> web/.env
-	@echo "VITE_COGNITO_CLIENT_ID=$$(cd infra && terraform output -raw cognito_client_id)" >> web/.env
-	@echo "VITE_CLOUDFORMATION_TEMPLATE_URL=$$(cd infra && terraform output -raw cloudformation_template_url)" >> web/.env
-	@echo "VITE_TRUSTED_ACCOUNT_ID=$$(cd infra && terraform output -raw trusted_account_id)" >> web/.env
-	@echo "Web environment updated with all configuration values."
+	@mkdir -p web
+	@MCP_URL=$$(cd infra && terraform output -raw mcp_server_url 2>/dev/null); \
+	if [ -z "$$MCP_URL" ]; then \
+		echo "Warning: mcp_api_endpoint not found. Using API Gateway URL + /mcp..."; \
+		MCP_URL=$$(cd infra && terraform output -raw api_url 2>/dev/null)/mcp; \
+	fi; \
+	echo "VITE_API_URL=$$(cd infra && terraform output -raw api_url 2>/dev/null || echo '')" > web/.env; \
+	echo "VITE_COGNITO_USER_POOL_ID=$$(cd infra && terraform output -raw cognito_user_pool_id 2>/dev/null || echo '')" >> web/.env; \
+	echo "VITE_COGNITO_CLIENT_ID=$$(cd infra && terraform output -raw cognito_client_id 2>/dev/null || echo '')" >> web/.env; \
+	echo "VITE_CLOUDFORMATION_TEMPLATE_URL=$$(cd infra && terraform output -raw cloudformation_template_url 2>/dev/null || echo '')" >> web/.env; \
+	echo "VITE_TRUSTED_ACCOUNT_ID=$$(cd infra && terraform output -raw trusted_account_id 2>/dev/null || echo '')" >> web/.env; \
+	echo "VITE_MCP_SERVER_URL=$$MCP_URL" >> web/.env; \
+	echo "Web environment updated with all configuration values."; \
+	echo "MCP Server URL: $$MCP_URL"

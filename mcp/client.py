@@ -5,7 +5,16 @@ import requests
 import os
 from typing import Dict, List, Optional, Any
 import logging
-from .auth import CognitoAuthManager
+
+# Handle both module and script imports
+try:
+    from .auth import CognitoAuthManager
+except ImportError:
+    # When running as a script, use absolute imports
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from auth import CognitoAuthManager
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +29,15 @@ class ThanosAPIClient:
     """
     
     def __init__(self):
+        # Validate required environment variables
+        required_vars = ['THANOS_API_URL']
+        missing_vars = [var for var in required_vars if var not in os.environ]
+        if missing_vars:
+            raise ValueError(
+                f"Missing required environment variables: {', '.join(missing_vars)}\n"
+                "Please set these in your Claude Desktop config or environment."
+            )
+        
         self.api_url = os.environ['THANOS_API_URL']
         self.auth_manager = CognitoAuthManager()
         logger.info(f"Initialized ThanosAPIClient for {self.api_url}")

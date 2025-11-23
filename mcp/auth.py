@@ -33,13 +33,28 @@ class CognitoAuthManager:
     """
     
     def __init__(self):
+        # Validate required environment variables
+        required_vars = ['THANOS_USER_POOL_ID', 'THANOS_CLIENT_ID', 'THANOS_EMAIL', 'THANOS_PASSWORD']
+        missing_vars = [var for var in required_vars if var not in os.environ]
+        if missing_vars:
+            raise ValueError(
+                f"Missing required environment variables: {', '.join(missing_vars)}\n"
+                "Please set these in your Claude Desktop config or environment."
+            )
+        
         self.user_pool_id = os.environ['THANOS_USER_POOL_ID']
         self.client_id = os.environ['THANOS_CLIENT_ID']
         self.email = os.environ['THANOS_EMAIL']
         self.password = os.environ['THANOS_PASSWORD']
         
         # Extract region from user pool ID (format: us-east-1_XXXXX)
-        self.region = self.user_pool_id.split('_')[0]
+        try:
+            self.region = self.user_pool_id.split('_')[0]
+        except (IndexError, AttributeError):
+            raise ValueError(
+                f"Invalid THANOS_USER_POOL_ID format: {self.user_pool_id}\n"
+                "Expected format: us-east-1_XXXXXXXXX"
+            )
         
         self.cognito = boto3.client('cognito-idp', region_name=self.region)
         self.tokens: Optional[TokenSet] = None

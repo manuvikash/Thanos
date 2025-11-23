@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "thanos": {
-      "command": "python",
+      "command": "python3",
       "args": ["/absolute/path/to/thanos/mcp/server.py"],
       "env": {
         "THANOS_API_URL": "https://your-api-id.execute-api.us-east-1.amazonaws.com",

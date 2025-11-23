@@ -6,6 +6,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   FINDINGS: '/findings',
   CONFIG: '/config',
+  MCP: '/mcp',
   REGISTER: '/register',
 } as const
 

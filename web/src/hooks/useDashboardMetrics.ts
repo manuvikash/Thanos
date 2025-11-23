@@ -25,7 +25,8 @@ export function useDashboardMetrics({ tenantId }: UseDashboardMetricsProps) {
         async (forceRefresh = false, overrideTenantId?: string) => {
             const effectiveTenantId = overrideTenantId || tenantId
 
-            if (!effectiveTenantId) {
+            // Skip if no tenant or if "all" customers (multi-tenant scan)
+            if (!effectiveTenantId || effectiveTenantId === 'all') {
                 setMetrics(null)
                 setError(null)
                 setLastUpdated(null)

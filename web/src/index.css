@@ -261,3 +261,13 @@ body {
 .font-mono-custom {
   font-family: 'Roboto Mono', monospace;
 }
+
+/* Prevent horizontal scrollbar */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  position: relative;
+}

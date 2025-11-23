@@ -1,7 +1,6 @@
-import { FormEvent } from 'react'
-import { Finding } from '../api'
+import { FormEvent, useState, useEffect } from 'react'
+import { Finding, getCustomers, Customer, runScan } from '../api'
 import { Spinner } from './ui/spinner'
-import { useScanLogic } from '../hooks/useScanLogic'
 
 interface HorizontalScanBarProps {
   onScanComplete: (
@@ -20,37 +19,110 @@ export default function HorizontalScanBar({
   onScanComplete,
   onScanError,
   onLoadingChange,
-  currentTenantId,
   onReset,
 }: HorizontalScanBarProps) {
-  const {
-    customers,
-    tenantId,
-    status,
-    progress,
-    error,
-    loadingCustomers,
-    handleCustomerChange,
-    executeScan,
-    resetSelection,
-  } = useScanLogic({
-    onScanComplete,
-    onScanError,
-    onLoadingChange,
-    currentTenantId,
-  })
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [status, setStatus] = useState<'ready' | 'scanning' | 'complete' | 'error'>('ready')
+  const [progress, setProgress] = useState('')
+  const [error, setError] = useState('')
+  const [loadingCustomers, setLoadingCustomers] = useState(true)
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const customerList = await getCustomers()
+        setCustomers(customerList)
+      } catch (error) {
+        console.error('Failed to load customers:', error)
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }
+    fetchCustomers()
+  }, [])
+
+  const executeScanAll = async () => {
+    if (customers.length === 0) {
+      setError('No customers available to scan')
+      setStatus('error')
+      onScanError('No customers available to scan')
+      return
+    }
+
+    setStatus('scanning')
+    setError('')
+    onLoadingChange(true)
+
+    const allFindings: Finding[] = []
+    let totalResources = 0
+    let totalFindings = 0
+    let lastSnapshotKey = ''
+
+    try {
+      // Scan each customer sequentially
+      for (let i = 0; i < customers.length; i++) {
+        const customer = customers[i]
+        setProgress(`Scanning ${customer.customer_name} (${i + 1}/${customers.length})...`)
+
+        try {
+          const response = await runScan({
+            tenant_id: customer.tenant_id,
+            role_arn: customer.role_arn,
+            account_id: customer.account_id,
+            regions: customer.regions,
+            rules_source: 'repo',
+          })
+
+          if (response.findings_sample) {
+            allFindings.push(...response.findings_sample)
+          }
+          totalResources += response.totals.resources || 0
+          totalFindings += response.totals.findings || 0
+          lastSnapshotKey = response.snapshot_key
+
+          // Report progress for each customer scan
+          if (i === customers.length - 1) {
+            // Last scan - report all findings
+            // Use first customer's tenant_id for dashboard metrics compatibility
+            onScanComplete(
+              allFindings,
+              { resources: totalResources, findings: totalFindings },
+              customers[0].tenant_id,
+              lastSnapshotKey
+            )
+          }
+        } catch (error) {
+          console.error(`Failed to scan ${customer.customer_name}:`, error)
+          // Continue with other customers even if one fails
+        }
+      }
+
+      setStatus('complete')
+      setProgress('All scans complete')
+    } catch (error) {
+      setStatus('error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setError(errorMessage)
+      onScanError(errorMessage)
+    } finally {
+      onLoadingChange(false)
+    }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    await executeScan()
+    await executeScanAll()
   }
 
   const handleResetClick = () => {
-    resetSelection()
+    setStatus('ready')
+    setProgress('')
+    setError('')
     onReset()
   }
 
   const getStatusText = () => {
+    if (progress) return progress
     switch (status) {
       case 'ready':
         return 'Ready'
@@ -82,31 +154,23 @@ export default function HorizontalScanBar({
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           {/* Left group: Controls */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
-            {/* Tenant Dropdown */}
-            <div className="flex-1 min-w-[200px] max-w-[300px]">
-              <select
-                value={tenantId}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                disabled={loadingCustomers || status === 'scanning'}
-                className="w-full h-11 px-3 bg-input border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                required
-              >
-                <option value="">
-                  {loadingCustomers ? 'Loading...' : 'Select Customer'}
-                </option>
-                {customers.map((customer) => (
-                  <option key={customer.tenant_id} value={customer.tenant_id}>
-                    {customer.customer_name}
-                  </option>
-                ))}
-              </select>
+            {/* Info Display */}
+            <div className="flex-1 min-w-[200px] max-w-[300px] px-3 h-11 flex items-center bg-muted rounded-md text-sm text-muted-foreground">
+              {loadingCustomers ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="h-4 w-4" />
+                  Loading customers...
+                </span>
+              ) : (
+                <span>{customers.length} customer{customers.length !== 1 ? 's' : ''} registered</span>
+              )}
             </div>
 
-            {/* Scan Button */}
+            {/* Scan All Button */}
             <button
               type="submit"
-              disabled={!tenantId || status === 'scanning' || loadingCustomers}
-              className="h-11 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-[120px]"
+              disabled={customers.length === 0 || status === 'scanning' || loadingCustomers}
+              className="h-11 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-[140px]"
             >
               {status === 'scanning' ? (
                 <span className="flex items-center justify-center gap-2">
@@ -114,7 +178,7 @@ export default function HorizontalScanBar({
                   Scanning
                 </span>
               ) : (
-                'Run Scan'
+                'Scan All Customers'
               )}
             </button>
 
@@ -122,7 +186,7 @@ export default function HorizontalScanBar({
             <button
               type="button"
               onClick={handleResetClick}
-              disabled={!tenantId || status === 'scanning'}
+              disabled={status === 'scanning'}
               className="h-11 px-4 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               title="Reset selection"
             >

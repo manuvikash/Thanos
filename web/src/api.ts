@@ -728,3 +728,54 @@ export async function deleteResourceGroup(groupId: string, tenantId?: string): P
 export async function getPublicConfig(): Promise<PublicConfig> {
   return fetchAPI('/config/public');
 }
+
+// ============================================================================
+// MCP (Model Context Protocol) API
+// ============================================================================
+
+export interface MCPApiKey {
+  api_key: string;
+  api_key_full?: string; // Full key returned on first load for caching
+  key_suffix?: string; // Consistent suffix for matching
+  key_id?: string; // Alias for key_suffix
+  name: string;
+  created_at: number;
+  expires_at: number;
+  last_used: number | null;
+  status: string;
+}
+
+export interface MCPApiKeyCreateRequest {
+  name: string;
+  expires_days?: number;
+}
+
+export interface MCPApiKeyCreateResponse {
+  api_key: string;
+  name: string;
+  created_at: number;
+  expires_at: number;
+  message: string;
+}
+
+export interface MCPApiKeysListResponse {
+  keys: MCPApiKey[];
+  count: number;
+}
+
+export async function getMCPApiKeys(): Promise<MCPApiKeysListResponse> {
+  return fetchAPI('/mcp/keys');
+}
+
+export async function createMCPApiKey(request: MCPApiKeyCreateRequest): Promise<MCPApiKeyCreateResponse> {
+  return fetchAPI('/mcp/keys', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function revokeMCPApiKey(keySuffix: string): Promise<{ message: string }> {
+  return fetchAPI(`/mcp/keys/${keySuffix}`, {
+    method: 'DELETE',
+  });
+}

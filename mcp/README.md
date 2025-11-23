@@ -83,7 +83,28 @@ Add this to your Claude Desktop config file:
 {
   "mcpServers": {
     "thanos": {
-      "command": "python",
+      "command": "python3",
+      "args": ["-m", "mcp.server"],
+      "cwd": "/absolute/path/to/thanos",
+      "env": {
+        "THANOS_API_URL": "https://your-api-id.execute-api.us-east-1.amazonaws.com",
+        "THANOS_USER_POOL_ID": "us-east-1_XXXXX",
+        "THANOS_CLIENT_ID": "abc123def456",
+        "THANOS_EMAIL": "mcp-service@yourdomain.com",
+        "THANOS_PASSWORD": "your-secure-password"
+      }
+    }
+  }
+}
+```
+
+**Alternative (if module import doesn't work):**
+
+```json
+{
+  "mcpServers": {
+    "thanos": {
+      "command": "python3",
       "args": ["/absolute/path/to/thanos/mcp/server.py"],
       "env": {
         "THANOS_API_URL": "https://your-api-id.execute-api.us-east-1.amazonaws.com",
@@ -167,6 +188,32 @@ Tokens are never persisted to disk and expire after 1 hour (auto-refreshed).
 
 ## Troubleshooting
 
+### Server Initialization Errors
+
+**Error: "failed to initialize server" or "failed to create streamable http client"**
+
+This usually indicates one of the following:
+
+1. **Missing Dependencies**: Ensure all Python packages are installed:
+   ```bash
+   cd mcp
+   pip install -r requirements.txt
+   ```
+
+2. **Incorrect Python Path**: Make sure `python3` is in your PATH and points to Python 3.11+
+   ```bash
+   python3 --version  # Should be 3.11 or higher
+   ```
+
+3. **Import Errors**: If you see import errors, try running the server directly:
+   ```bash
+   cd /path/to/thanos/mcp
+   python3 server.py
+   ```
+   If this works, the issue is with the Claude Desktop configuration.
+
+4. **Transport Mismatch**: The server uses stdio transport. If you see errors about HTTP/SSE, ensure your Claude Desktop config uses the `command` and `args` format (not a URL).
+
 ### Authentication Errors
 
 ```
@@ -176,6 +223,7 @@ Error: Invalid Cognito credentials
 - Verify THANOS_EMAIL and THANOS_PASSWORD are correct
 - Ensure the user exists in the Cognito User Pool
 - Check the password is set to permanent (not temporary)
+- Verify the user is not in FORCE_CHANGE_PASSWORD state
 
 ### API Connection Errors
 
@@ -183,18 +231,30 @@ Error: Invalid Cognito credentials
 Error: API error: 401
 ```
 
-- Verify THANOS_API_URL is correct
+- Verify THANOS_API_URL is correct (should end without trailing slash)
 - Check User Pool ID and Client ID match your infrastructure
 - Ensure API Gateway Cognito authorizer is configured correctly
+- Verify the service account has proper permissions
 
 ### Missing Environment Variables
 
 ```
-KeyError: 'THANOS_API_URL'
+Error: Missing required environment variables
 ```
 
 - All environment variables must be set in the MCP client config
 - Use absolute paths for file references
+- Check for typos in variable names (they are case-sensitive)
+- Restart Claude Desktop after changing the config
+
+### 404 Errors on Client Registration
+
+If you see errors like "failed to register client: registration request failed with status 404":
+
+- This usually means Claude Desktop is trying to use HTTP transport instead of stdio
+- Verify your config uses `"command"` and `"args"` (stdio) not a URL (HTTP)
+- Ensure the server script path is absolute and correct
+- Check that Python can execute the script: `python3 /path/to/thanos/mcp/server.py`
 
 ## Development
 
