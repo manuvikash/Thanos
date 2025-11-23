@@ -150,7 +150,7 @@ export default function HorizontalScanBar({
 
   return (
     <div className="sticky top-0 z-10 bg-background border-b backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="px-6 py-4">
+      <form onSubmit={handleSubmit} className="px-4 py-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           {/* Left group: Controls */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
