@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight, LogOut, Home, Settings } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, LogOut, Home, Settings, Terminal } from 'lucide-react'
 import { signOut } from 'aws-amplify/auth'
 import {
   Sidebar,
@@ -45,6 +45,11 @@ const navigationItems: NavigationItem[] = [
     title: 'Configuration',
     url: ROUTES.CONFIG,
     icon: Settings,
+  },
+  {
+    title: 'MCP Integration',
+    url: ROUTES.MCP,
+    icon: Terminal,
   },
 ]
 

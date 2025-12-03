@@ -15,7 +15,17 @@ from mcp.server import Server
 from mcp.types import Tool, TextContent, EmbeddedResource, ImageContent
 import mcp.server.stdio
 
-from .client import ThanosAPIClient
+# Handle both module and script imports
+try:
+    from .client import ThanosAPIClient
+    from .auth import CognitoAuthManager
+except ImportError:
+    # When running as a script, use absolute imports
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from client import ThanosAPIClient
+    from auth import CognitoAuthManager
 
 # Configure logging
 logging.basicConfig(
@@ -35,7 +45,14 @@ def get_client() -> ThanosAPIClient:
     """Get or create API client instance."""
     global client
     if client is None:
-        client = ThanosAPIClient()
+        try:
+            client = ThanosAPIClient()
+        except ValueError as e:
+            logger.error(f"Failed to initialize API client: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error initializing API client: {e}", exc_info=True)
+            raise
     return client
 
 
@@ -200,6 +217,8 @@ async def call_tool(name: str, arguments: dict) -> Sequence[TextContent | ImageC
     """Execute MCP tool calls."""
     
     try:
+        # Lazy initialization - only create client when first tool is called
+        # This allows server to start even if env vars are missing initially
         api_client = get_client()
         
         if name == "list_resources":
@@ -472,12 +491,19 @@ async def main():
     """Run the MCP server."""
     logger.info("Starting Thanos MCP Server")
     
-    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+    try:
+        # Use stdio transport for MCP communication
+        async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+            logger.info("MCP stdio transport established")
+            await app.run(
+                read_stream,
+                write_stream
+            )
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except Exception as e:
+        logger.error(f"Fatal error in MCP server: {e}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

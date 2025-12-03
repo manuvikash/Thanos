@@ -50,7 +50,7 @@ export function DashboardView({
         <EmptyState
           icon={AlertCircle}
           title="No Data Available"
-          description="Run a scan to view dashboard metrics for this tenant."
+          description="Run a scan to view dashboard metrics. When scanning all customers, dashboard shows metrics for the first customer."
         />
       </div>
     )

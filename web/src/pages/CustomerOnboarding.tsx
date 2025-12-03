@@ -12,6 +12,7 @@ import {
 } from '../components/ui/select';
 import { ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
 import { verifyAndRegisterCustomer, getPublicConfig } from '../api';
+import { RegistrationHeader } from '../components/registration/RegistrationHeader';
 
 const AWS_REGIONS = [
   'us-east-1',
@@ -132,22 +133,22 @@ export default function CustomerOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-cyan-400 to-teal-500 bg-clip-text text-transparent">
-              Thanos
-            </span>
-          </h1>
-        </div>
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Background Gradient */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl" />
+      </div>
 
-        {/* Main Card */}
-        <Card className="border-2">
-          <CardHeader className="text-center pb-6">
-            <CardTitle className="text-3xl font-bold">Onboard New Customer</CardTitle>
-            <CardDescription className="text-base">
+      <RegistrationHeader />
+
+      <div className="relative z-10 flex items-center justify-center p-6 pt-12">
+        <div className="w-full max-w-4xl">
+          {/* Main Card */}
+          <Card className="border-2">
+            <CardHeader className="text-center pb-6">
+              <CardTitle className="text-3xl font-bold">Onboard New Customer</CardTitle>
+              <CardDescription className="text-base">
               Connect your AWS account to get started with security scanning and compliance monitoring.
             </CardDescription>
           </CardHeader>
@@ -277,6 +278,7 @@ export default function CustomerOnboarding() {
             </a>
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

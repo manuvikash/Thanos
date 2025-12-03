@@ -10,13 +10,16 @@ interface FindingsFiltersProps {
   resourceTypeFilter: string
   regionFilter: string
   categoryFilter: string
+  customerFilter: string
   availableResourceTypes: string[]
   availableRegions: string[]
   availableCategories: string[]
+  availableCustomers: Array<{ tenant_id: string; name: string }>
   onSeverityChange: (severities: string[]) => void
   onResourceTypeChange: (type: string) => void
   onRegionChange: (region: string) => void
   onCategoryChange: (category: string) => void
+  onCustomerChange: (customer: string) => void
   onClearFilters: () => void
 }
 
@@ -27,13 +30,16 @@ export function FindingsFilters({
   resourceTypeFilter,
   regionFilter,
   categoryFilter,
+  customerFilter,
   availableResourceTypes,
   availableRegions,
   availableCategories,
+  availableCustomers,
   onSeverityChange,
   onResourceTypeChange,
   onRegionChange,
   onCategoryChange,
+  onCustomerChange,
   onClearFilters,
 }: FindingsFiltersProps) {
   const handleSeverityToggle = (severity: string) => {
@@ -44,7 +50,7 @@ export function FindingsFilters({
     }
   }
 
-  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0) + (regionFilter && regionFilter !== 'all' ? 1 : 0) + (categoryFilter && categoryFilter !== 'all' ? 1 : 0)
+  const activeFilterCount = severityFilter.length + (resourceTypeFilter && resourceTypeFilter !== 'all' ? 1 : 0) + (regionFilter && regionFilter !== 'all' ? 1 : 0) + (categoryFilter && categoryFilter !== 'all' ? 1 : 0) + (customerFilter && customerFilter !== 'all' ? 1 : 0)
   const hasActiveFilters = activeFilterCount > 0
 
   return (
@@ -131,6 +137,28 @@ export function FindingsFilters({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Customer Filter */}
+        {availableCustomers.length > 1 && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="customer-select" className="text-sm font-medium">
+              Customer
+            </Label>
+            <Select value={customerFilter} onValueChange={onCustomerChange}>
+              <SelectTrigger id="customer-select" className="w-[200px]">
+                <SelectValue placeholder="All Customers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Customers</SelectItem>
+                {availableCustomers.map((customer) => (
+                  <SelectItem key={customer.tenant_id} value={customer.tenant_id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Clear Filters Button */}
         {hasActiveFilters && (

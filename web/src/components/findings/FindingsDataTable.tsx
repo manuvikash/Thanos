@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Finding } from '@/api'
+import { Finding, getCustomers, Customer } from '@/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ interface FindingsDataTableProps {
   itemsPerPage?: number
 }
 
-type SortColumn = 'severity' | 'resource_type' | 'rule_id' | 'resource_arn' | 'message' | 'region' | 'category'
+type SortColumn = 'severity' | 'resource_type' | 'rule_id' | 'resource_arn' | 'message' | 'region' | 'category' | 'customer'
 type SortDirection = 'asc' | 'desc' | null
 
 // Utility function to extract AWS resource type from ARN
@@ -68,6 +68,43 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>('all')
   const [regionFilter, setRegionFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [customerFilter, setCustomerFilter] = useState<string>('all')
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+
+  // Fetch customers on mount
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setLoadingCustomers(true)
+      try {
+        const customerList = await getCustomers()
+        setCustomers(customerList)
+      } catch (error) {
+        console.error('Failed to load customers:', error)
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }
+    fetchCustomers()
+  }, [])
+
+  // Helper to get customer name from tenant_id
+  const getCustomerName = (tenantId: string): string => {
+    const customer = customers.find(c => c.tenant_id === tenantId)
+    return customer?.customer_name || tenantId
+  }
+
+  // Extract unique customers from findings
+  const availableCustomers = useMemo(() => {
+    const tenantIds = new Set<string>()
+    findings.forEach((finding) => {
+      tenantIds.add(finding.tenant_id)
+    })
+    return Array.from(tenantIds).map(tenantId => ({
+      tenant_id: tenantId,
+      name: getCustomerName(tenantId)
+    })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [findings, customers])
 
   // Extract unique resource types from findings
   const availableResourceTypes = useMemo(() => {
@@ -125,9 +162,14 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
         }
       }
 
+      // Customer filter
+      if (customerFilter && customerFilter !== 'all' && finding.tenant_id !== customerFilter) {
+        return false
+      }
+
       return true
     })
-  }, [findings, severityFilter, resourceTypeFilter, regionFilter])
+  }, [findings, severityFilter, resourceTypeFilter, regionFilter, categoryFilter, customerFilter])
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -135,13 +177,14 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
     setResourceTypeFilter('all')
     setRegionFilter('all')
     setCategoryFilter('all')
+    setCustomerFilter('all')
     setCurrentPage(1)
   }
 
   // Reset to page 1 when findings or filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [findings, severityFilter, resourceTypeFilter, regionFilter, categoryFilter])
+  }, [findings, severityFilter, resourceTypeFilter, regionFilter, categoryFilter, customerFilter])
 
   // Handle column header click for sorting
   const handleSort = (column: SortColumn) => {
@@ -197,6 +240,10 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
       case 'category':
         aValue = a.category || 'compliance'
         bValue = b.category || 'compliance'
+        break
+      case 'customer':
+        aValue = getCustomerName(a.tenant_id)
+        bValue = getCustomerName(b.tenant_id)
         break
       default:
         return 0
@@ -302,7 +349,7 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
         <CardTitle>Findings</CardTitle>
         <CardDescription>
           Showing {filteredFindings.length} of {totalCount} findings
-          {(severityFilter.length > 0 || (resourceTypeFilter && resourceTypeFilter !== 'all')) && ' (filtered)'}
+          {(severityFilter.length > 0 || resourceTypeFilter !== 'all' || regionFilter !== 'all' || categoryFilter !== 'all' || customerFilter !== 'all') && ' (filtered)'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -312,13 +359,16 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
           resourceTypeFilter={resourceTypeFilter}
           regionFilter={regionFilter}
           categoryFilter={categoryFilter}
+          customerFilter={customerFilter}
           availableResourceTypes={availableResourceTypes}
           availableRegions={availableRegions}
           availableCategories={availableCategories}
+          availableCustomers={availableCustomers}
           onSeverityChange={setSeverityFilter}
           onResourceTypeChange={setResourceTypeFilter}
           onRegionChange={setRegionFilter}
           onCategoryChange={setCategoryFilter}
+          onCustomerChange={setCustomerFilter}
           onClearFilters={handleClearFilters}
         />
 
@@ -357,6 +407,20 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
                     <SortIndicator column="category" />
                   </button>
                 </TableHead>
+                {availableCustomers.length > 1 && (
+                  <TableHead>
+                    <button
+                      onClick={() => handleSort('customer')}
+                      className={cn(
+                        'flex items-center hover:text-foreground transition-colors',
+                        sortColumn === 'customer' && 'text-foreground'
+                      )}
+                    >
+                      Customer
+                      <SortIndicator column="customer" />
+                    </button>
+                  </TableHead>
+                )}
                 <TableHead>
                   <button
                     onClick={() => handleSort('resource_type')}
@@ -432,6 +496,13 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
                   <TableCell>
                     {getCategoryBadge(finding.category)}
                   </TableCell>
+                  {availableCustomers.length > 1 && (
+                    <TableCell>
+                      <Badge variant="outline" className="bg-cyan-500/10 text-cyan-500 border-cyan-500/20">
+                        {getCustomerName(finding.tenant_id)}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant="outline">
                       {extractResourceType(finding.resource_arn)}
