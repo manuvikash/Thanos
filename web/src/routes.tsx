@@ -5,9 +5,11 @@ export const ROUTES = {
   ROOT: '/',
   DASHBOARD: '/dashboard',
   FINDINGS: '/findings',
-  CONFIG: '/config',
+  ONBOARD: '/onboard',
   MCP: '/mcp',
+  CONFIG: '/config',
   REGISTER: '/register',
+  ALERTS: '/alerts',
 } as const
 
 /**

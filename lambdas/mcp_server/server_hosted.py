@@ -715,7 +715,7 @@ def execute_list_customers(arguments: Dict[str, Any]) -> Dict[str, Any]:
         customers = response.get('customers', [])
         
         if not customers:
-            text = "No customers registered yet. Register a customer first to start monitoring their infrastructure."
+            text = "No accounts registered yet. Register an account first to start monitoring their infrastructure."
         else:
             lines = ["# Registered Customers", ""]
             lines.append(f"**Total Customers:** {len(customers)}")

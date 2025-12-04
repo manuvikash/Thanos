@@ -779,3 +779,27 @@ export async function revokeMCPApiKey(keySuffix: string): Promise<{ message: str
     method: 'DELETE',
   });
 }
+
+// ========================================
+// Alert Configuration APIs
+// ========================================
+
+export interface AlertConfig {
+  enabled: boolean;
+  severity_levels: string[];
+  email_addresses: string[];
+  sns_topic_arn?: string;
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export async function getAlertConfig(): Promise<AlertConfig> {
+  return fetchAPI('/alerts/config');
+}
+
+export async function updateAlertConfig(config: AlertConfig): Promise<AlertConfig> {
+  return fetchAPI('/alerts/config', {
+    method: 'PUT',
+    body: JSON.stringify(config),
+  });
+}

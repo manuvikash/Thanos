@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Table, ChevronRight, LogOut, Home, Settings, Terminal } from 'lucide-react'
+import { LayoutDashboard, Table, ChevronRight, LogOut, Settings, Terminal, UserPlus, Bell } from 'lucide-react'
 import { signOut } from 'aws-amplify/auth'
 import {
   Sidebar,
@@ -27,11 +27,6 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   {
-    title: 'Home',
-    url: ROUTES.ROOT,
-    icon: Home,
-  },
-  {
     title: 'Dashboard',
     url: ROUTES.DASHBOARD,
     icon: LayoutDashboard,
@@ -42,14 +37,24 @@ const navigationItems: NavigationItem[] = [
     icon: Table,
   },
   {
-    title: 'Configuration',
-    url: ROUTES.CONFIG,
-    icon: Settings,
+    title: 'Onboard Account',
+    url: ROUTES.ONBOARD,
+    icon: UserPlus,
   },
   {
     title: 'MCP Integration',
     url: ROUTES.MCP,
     icon: Terminal,
+  },
+  {
+    title: 'Configuration',
+    url: ROUTES.CONFIG,
+    icon: Settings,
+  },
+  {
+    title: 'Alerts',
+    url: ROUTES.ALERTS,
+    icon: Bell,
   },
 ]
 

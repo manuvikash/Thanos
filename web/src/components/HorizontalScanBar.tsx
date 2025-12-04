@@ -162,7 +162,7 @@ export default function HorizontalScanBar({
                   Loading customers...
                 </span>
               ) : (
-                <span>{customers.length} customer{customers.length !== 1 ? 's' : ''} registered</span>
+                <span>{customers.length} account{customers.length !== 1 ? 's' : ''} registered</span>
               )}
             </div>
 
@@ -178,7 +178,7 @@ export default function HorizontalScanBar({
                   Scanning
                 </span>
               ) : (
-                'Scan All Customers'
+                'Scan All Accounts'
               )}
             </button>
 

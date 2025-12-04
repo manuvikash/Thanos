@@ -76,7 +76,7 @@ def fetch_base_config(table_name: str, resource_type: str) -> Optional[BaseConfi
     """
     try:
         dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
-        table = dynamodb.Table(table_name)
+        table = dynamodb.Table(table_name)  # type: ignore
         
         response = table.get_item(
             Key={
@@ -108,7 +108,7 @@ def fetch_matching_groups(table_name: str, resource: Resource) -> List[ResourceG
     """
     try:
         dynamodb = boto3.resource("dynamodb", region_name="us-west-1")
-        table = dynamodb.Table(table_name)
+        table = dynamodb.Table(table_name)  # type: ignore
         
         # Query using GSI1 for efficient lookup
         response = table.query(

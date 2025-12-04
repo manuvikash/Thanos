@@ -22,7 +22,8 @@ import {
   Search,
   Users,
   Settings,
-  Shield
+  Shield,
+  Download
 } from 'lucide-react'
 import { getMCPApiKeys, createMCPApiKey, revokeMCPApiKey, MCPApiKey } from '../api'
 
@@ -75,18 +76,59 @@ export default function MCPSettingsPage() {
 
   const loadApiKeys = async () => {
     try {
+      console.log('🔄 Loading API keys from backend...')
       const response = await getMCPApiKeys()
+      console.log('✅ Backend response:', response)
       const backendKeys = response.keys || []
       
-      console.log('Loaded backend keys:', backendKeys)
+      console.log('📊 Loaded backend keys:', backendKeys.length, 'keys')
+      backendKeys.forEach((key, i) => {
+        console.log(`  Key ${i + 1}:`, {
+          name: key.name,
+          status: key.status,
+          api_key: key.api_key,
+          has_full_key: !!key.api_key_full
+        })
+      })
       
-      // Try to restore full keys from localStorage
+      // Store any full keys from backend response (first load or when keys are returned)
       try {
         const stored = localStorage.getItem(MCP_KEYS_STORAGE_KEY)
-        console.log('Stored keys from localStorage:', stored)
+        const storedKeys: Record<string, string> = stored ? JSON.parse(stored) : {}
         
-        if (stored) {
-          const storedKeys: Record<string, string> = JSON.parse(stored)
+        // Save any api_key_full values from backend to localStorage
+        let keysUpdated = false
+        backendKeys.forEach(key => {
+          if ((key as any).api_key_full) {
+            const fullKey = (key as any).api_key_full
+            let keySuffix = ''
+            
+            // Extract suffix using same logic as backend
+            if (fullKey.includes('_')) {
+              const tokenPart = fullKey.split('_').pop() || ''
+              keySuffix = tokenPart.length >= 8 ? tokenPart.slice(-8) : tokenPart
+            } else {
+              keySuffix = fullKey.length >= 8 ? fullKey.slice(-8) : fullKey
+            }
+            
+            // Store by suffix and name
+            if (keySuffix && !storedKeys[keySuffix]) {
+              storedKeys[keySuffix] = fullKey
+              storedKeys[`name:${key.name}`] = fullKey
+              keysUpdated = true
+              console.log(`💾 Stored full key for "${key.name}" with suffix ${keySuffix}`)
+            }
+          }
+        })
+        
+        if (keysUpdated) {
+          localStorage.setItem(MCP_KEYS_STORAGE_KEY, JSON.stringify(storedKeys))
+          console.log('✅ Updated localStorage with backend keys')
+        }
+        
+        console.log('Stored keys from localStorage:', Object.keys(storedKeys).length, 'keys')
+        
+        if (Object.keys(storedKeys).length > 0) {
           console.log('Parsed stored keys:', Object.keys(storedKeys))
           
           // Match backend keys with stored full keys by suffix
@@ -113,14 +155,24 @@ export default function MCPSettingsPage() {
             // Try exact suffix match first
             if (keySuffix && storedKeys[keySuffix]) {
               console.log(`✅ Found full key for "${key.name}" with suffix ${keySuffix}`)
-              return { ...key, api_key: storedKeys[keySuffix] }
+              return { 
+                ...key, 
+                api_key: storedKeys[keySuffix],
+                api_key_full: storedKeys[keySuffix],
+                key_suffix: keySuffix 
+              }
             }
             
             // Try name-based match (fallback)
             const nameKey = `name:${key.name}`
             if (storedKeys[nameKey]) {
               console.log(`✅ Found full key for "${key.name}" by name: ${nameKey}`)
-              return { ...key, api_key: storedKeys[nameKey] }
+              return { 
+                ...key, 
+                api_key: storedKeys[nameKey],
+                api_key_full: storedKeys[nameKey],
+                key_suffix: keySuffix 
+              }
             }
             
             // Try to find by matching end of stored keys (last resort)
@@ -131,7 +183,12 @@ export default function MCPSettingsPage() {
                 
                 if (fullKey.endsWith(keySuffix) || storedKey === keySuffix) {
                   console.log(`✅ Found full key for "${key.name}" by end matching: ${storedKey}`)
-                  return { ...key, api_key: fullKey }
+                  return { 
+                    ...key, 
+                    api_key: fullKey,
+                    api_key_full: fullKey,
+                    key_suffix: keySuffix 
+                  }
                 }
               }
             }
@@ -144,11 +201,33 @@ export default function MCPSettingsPage() {
           setApiKeys(enrichedKeys)
         } else {
           console.log('No stored keys found in localStorage')
-          setApiKeys(backendKeys)
+          // Even without localStorage, check if backend provided api_key_full
+          const keysWithFullKeys = backendKeys.map(key => {
+            if ((key as any).api_key_full) {
+              return {
+                ...key,
+                api_key: (key as any).api_key_full,
+                api_key_full: (key as any).api_key_full
+              }
+            }
+            return key
+          })
+          setApiKeys(keysWithFullKeys)
         }
       } catch (error) {
         console.error('Failed to restore stored keys:', error)
-        setApiKeys(backendKeys)
+        // Fallback: use api_key_full if available
+        const keysWithFullKeys = backendKeys.map(key => {
+          if ((key as any).api_key_full) {
+            return {
+              ...key,
+              api_key: (key as any).api_key_full,
+              api_key_full: (key as any).api_key_full
+            }
+          }
+          return key
+        })
+        setApiKeys(keysWithFullKeys)
       }
     } catch (error) {
       console.error('Failed to load API keys:', error)
@@ -175,18 +254,18 @@ export default function MCPSettingsPage() {
       setNewKey(fullApiKey)
       setNewKeyName('')
       
+      // Extract key suffix for storage and state
+      let keySuffix = ''
+      if (fullApiKey.includes('_')) {
+        const tokenPart = fullApiKey.split('_').pop() || ''
+        // Get last 8 chars, or all if shorter (matching backend logic)
+        keySuffix = tokenPart.length >= 8 ? tokenPart.slice(-8) : tokenPart
+      } else {
+        keySuffix = fullApiKey.length >= 8 ? fullApiKey.slice(-8) : fullApiKey
+      }
+      
       // Store the full API key in localStorage by suffix
-      // Use the same extraction logic as backend (last 8 chars of token part)
       try {
-        let keySuffix = ''
-        if (fullApiKey.includes('_')) {
-          const tokenPart = fullApiKey.split('_').pop() || ''
-          // Get last 8 chars, or all if shorter (matching backend logic)
-          keySuffix = tokenPart.length >= 8 ? tokenPart.slice(-8) : tokenPart
-        } else {
-          keySuffix = fullApiKey.length >= 8 ? fullApiKey.slice(-8) : fullApiKey
-        }
-        
         const stored = localStorage.getItem(MCP_KEYS_STORAGE_KEY)
         const storedKeys: Record<string, string> = stored ? JSON.parse(stored) : {}
         
@@ -210,7 +289,10 @@ export default function MCPSettingsPage() {
       
       // Add the newly created key to the list immediately (with full key for internal use)
       const newKeyEntry: MCPApiKey = {
-        api_key: fullApiKey, // Store full key internally (not masked)
+        api_key: fullApiKey, // Store full key in api_key field
+        api_key_full: fullApiKey, // Also store in api_key_full for clarity
+        key_suffix: keySuffix,
+        key_id: keySuffix,
         name: response.name,
         created_at: response.created_at,
         expires_at: response.expires_at,
@@ -253,7 +335,10 @@ export default function MCPSettingsPage() {
   }
 
   // Helper to get display version of API key (masked)
-  const getDisplayKey = (apiKey: string): string => {
+  const getDisplayKey = (apiKey: string | undefined): string => {
+    if (!apiKey) {
+      return 'thanos_mcp_***unknown'
+    }
     if (apiKey.includes('***')) {
       return apiKey // Already masked
     }
@@ -263,7 +348,10 @@ export default function MCPSettingsPage() {
   }
 
   // Helper to get full key from display key
-  const getFullKey = (displayKey: string): string => {
+  const getFullKey = (displayKey: string | undefined): string => {
+    if (!displayKey) {
+      return ''
+    }
     if (!displayKey.includes('***')) {
       return displayKey // Already full
     }
@@ -296,12 +384,226 @@ export default function MCPSettingsPage() {
     return displayKey // Fallback to display key
   }
 
-  const generateConfigForKey = (apiKey: string) => {
+  const generateStdioWrapper = (apiKey: string | undefined): string => {
+    if (!apiKey) {
+      return '# Error: No API key provided'
+    }
+    const keyToUse = getFullKey(apiKey);
+    if (!keyToUse) {
+      return '# Error: Could not retrieve full API key'
+    }
+    return `#!/usr/bin/env python3
+"""
+Thanos MCP Stdio Wrapper
+Connects stdio MCP clients (like Gemini CLI) to Thanos hosted server
+"""
+
+import sys
+import json
+from typing import Dict, Any, Optional
+
+# Configuration
+MCP_SERVER_URL = "${mcpServerUrl.replace(/\/$/, '')}"
+API_KEY = "${keyToUse}"
+
+HEADERS = {
+    "x-api-key": API_KEY,
+    "Content-Type": "application/json"
+}
+
+
+def log_error(msg: str):
+    """Log to stderr for debugging"""
+    print(f"[THANOS-MCP] {msg}", file=sys.stderr, flush=True)
+
+
+def send_request(method: str, params: Optional[Dict[str, Any]] = None, msg_id: Any = None) -> Dict[str, Any]:
+    """Send request to hosted MCP server"""
+    try:
+        import urllib.request
+        import urllib.error
+    except ImportError:
+        return {
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32603,
+                "message": "urllib not available - Python installation issue"
+            },
+            "id": msg_id
+        }
+    
+    try:
+        # For initialize, use GET /initialize endpoint (returns plain JSON, not JSON-RPC)
+        if method == "initialize":
+            url = f"{MCP_SERVER_URL}/initialize"
+            log_error(f"GET {url}")
+            req = urllib.request.Request(url, headers=HEADERS)
+            
+            with urllib.request.urlopen(req, timeout=30) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                log_error(f"Initialize OK")
+                # Wrap plain response in JSON-RPC format
+                return {
+                    "jsonrpc": "2.0",
+                    "result": result,
+                    "id": msg_id
+                }
+        
+        # For other methods, POST to /messages (expects and returns JSON-RPC)
+        url = f"{MCP_SERVER_URL}/messages"
+        payload = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or {},
+            "id": msg_id
+        }
+        
+        log_error(f"POST {url} - method: {method}")
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers=HEADERS,
+            method='POST'
+        )
+        
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            log_error(f"Response OK for {method}")
+            # /messages already returns JSON-RPC format
+            return result
+            
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode('utf-8')
+            log_error(f"HTTP {e.code}: {error_body}")
+        except:
+            error_body = str(e)
+            log_error(f"HTTP {e.code}")
+        
+        return {
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32000,
+                "message": f"HTTP {e.code}: {error_body}"
+            },
+            "id": msg_id
+        }
+    except urllib.error.URLError as e:
+        log_error(f"Connection error: {str(e)}")
+        return {
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32000,
+                "message": f"Connection failed: {str(e)}"
+            },
+            "id": msg_id
+        }
+    except Exception as e:
+        log_error(f"Request failed: {str(e)}")
+        return {
+            "jsonrpc": "2.0",
+            "error": {
+                "code": -32603,
+                "message": f"Internal error: {str(e)}"
+            },
+            "id": msg_id
+        }
+
+
+def main():
+    """Main stdio loop - read from stdin, write to stdout"""
+    # Unbuffer stdin and stdout for immediate I/O
+    try:
+        sys.stdin.reconfigure(line_buffering=True)
+        sys.stdout.reconfigure(line_buffering=True)
+    except AttributeError:
+        # Python 2 or older Python 3 - already unbuffered or use different method
+        pass
+    
+    log_error("Thanos MCP wrapper starting...")
+    log_error(f"Server URL: {MCP_SERVER_URL}")
+    log_error(f"API Key: {API_KEY[:20]}...")
+    log_error("Ready to receive requests...")
+    
+    try:
+        # Read JSON-RPC requests line-by-line from stdin
+        while True:
+            try:
+                line = sys.stdin.readline()
+                if not line:
+                    log_error("stdin EOF - connection closed by client")
+                    break
+                
+                line = line.strip()
+                if not line:
+                    log_error("Empty line received, skipping")
+                    continue
+                
+                log_error(f"Received line: {line[:100]}...")
+                request = json.loads(line)
+                method = request.get("method")
+                params = request.get("params")
+                msg_id = request.get("id")
+                
+                log_error(f"Request: {method} (id={msg_id})")
+                
+                # Forward request to hosted server
+                response = send_request(method, params, msg_id)
+                
+                # Write JSON-RPC response to stdout
+                print(json.dumps(response), flush=True)
+                log_error(f"Response sent for {method}")
+                
+            except json.JSONDecodeError as e:
+                log_error(f"JSON decode error: {e}")
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32700,
+                        "message": f"Parse error: {str(e)}"
+                    },
+                    "id": None
+                }
+                print(json.dumps(error_response), flush=True)
+                
+            except Exception as e:
+                log_error(f"Error processing request: {e}")
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32603,
+                        "message": f"Internal error: {str(e)}"
+                    },
+                    "id": request.get("id") if 'request' in locals() else None
+                }
+                print(json.dumps(error_response), flush=True)
+    
+    except KeyboardInterrupt:
+        log_error("Interrupted by user")
+    except Exception as e:
+        log_error(f"Fatal error: {e}")
+    finally:
+        log_error("Wrapper shutting down")
+
+
+if __name__ == "__main__":
+    main()
+`;
+  }
+
+  const generateConfigForKey = (apiKey: string | undefined) => {
+    if (!apiKey) {
+      return '{}'
+    }
     // For masked keys, we can't generate a working config
     // But we can show the template with a placeholder
     try {
       // Always use full key for config generation
       const keyToUse = getFullKey(apiKey);
+      if (!keyToUse) {
+        return '{}'
+      }
       return `{
   "mcpServers": {
     "thanos": {
@@ -325,6 +627,19 @@ export default function MCPSettingsPage() {
     setTimeout(() => setCopiedConfig(null), 2000)
   }
 
+  const downloadStdioWrapper = (apiKey: string) => {
+    const script = generateStdioWrapper(apiKey)
+    const blob = new Blob([script], { type: 'text/x-python' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'thanos-mcp-stdio.py'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -340,6 +655,15 @@ export default function MCPSettingsPage() {
       "headers": {
         "x-api-key": "YOUR_API_KEY_HERE"
       }
+    }
+  }
+}`
+
+  const geminiConfigTemplate = (wrapperPath: string) => `{
+  "mcpServers": {
+    "thanos": {
+      "command": "python3",
+      "args": ["${wrapperPath}"]
     }
   }
 }`
@@ -484,88 +808,228 @@ export default function MCPSettingsPage() {
         <TabsContent value="setup" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quick Setup</CardTitle>
+              <CardTitle>Choose Your Client</CardTitle>
               <CardDescription>
-                Get connected in 3 simple steps
+                Select your MCP client for setup instructions
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex flex-col items-center text-center p-6 border rounded-lg">
-                  <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
-                    1
-                  </div>
-                  <h3 className="font-semibold mb-2">Create API Key</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Generate your key in the API Keys tab
-                  </p>
-                </div>
+              <Tabs defaultValue="claude" className="space-y-6">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="claude">Claude Desktop</TabsTrigger>
+                  <TabsTrigger value="gemini">Gemini CLI</TabsTrigger>
+                </TabsList>
 
-                <div className="flex flex-col items-center text-center p-6 border rounded-lg">
-                  <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
-                    2
-                  </div>
-                  <h3 className="font-semibold mb-2">Add to Claude</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Copy the config below to your Claude settings
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-center text-center p-6 border rounded-lg">
-                  <div className="h-12 w-12 rounded-full bg-green-500 text-white flex items-center justify-center text-xl font-bold mb-3">
-                    ✓
-                  </div>
-                  <h3 className="font-semibold mb-2">Start Using</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Restart Claude and try the tools
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Claude Desktop Configuration</Label>
-                <div className="bg-[#0C0C0C] rounded-lg overflow-hidden border border-border">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                    <span className="text-xs font-mono text-muted-foreground">claude_desktop_config.json</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(claudeConfigTemplate)}
-                      className="h-7 text-xs"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </Button>
-                  </div>
-                  <pre className="p-4 text-sm font-mono overflow-x-auto">
-                    <code className="text-gray-300">{claudeConfigTemplate}</code>
-                  </pre>
-                </div>
-                <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-                  <p><strong>Config file locations:</strong></p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div className="bg-muted p-3 rounded">
-                      <strong className="block mb-1">macOS</strong>
-                      <code className="text-[10px]">~/Library/Application Support/Claude/</code>
+                {/* Claude Desktop Setup */}
+                <TabsContent value="claude" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        1
+                      </div>
+                      <h3 className="font-semibold mb-2">Create API Key</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Generate your key in the API Keys tab
+                      </p>
                     </div>
-                    <div className="bg-muted p-3 rounded">
-                      <strong className="block mb-1">Windows</strong>
-                      <code className="text-[10px]">%APPDATA%/Claude/</code>
+
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        2
+                      </div>
+                      <h3 className="font-semibold mb-2">Add to Claude</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Copy the config below to your Claude settings
+                      </p>
                     </div>
-                    <div className="bg-muted p-3 rounded">
-                      <strong className="block mb-1">Linux</strong>
-                      <code className="text-[10px]">~/.config/Claude/</code>
+
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-green-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        ✓
+                      </div>
+                      <h3 className="font-semibold mb-2">Start Using</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Restart Claude and try the tools
+                      </p>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Replace <code className="bg-muted px-1 rounded">YOUR_API_KEY_HERE</code> with your actual API key. Restart Claude Desktop after saving the config.
-                </AlertDescription>
-              </Alert>
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Claude Desktop Configuration</Label>
+                    <div className="bg-[#0C0C0C] rounded-lg overflow-hidden border border-border">
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                        <span className="text-xs font-mono text-muted-foreground">claude_desktop_config.json</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(claudeConfigTemplate)}
+                          className="h-7 text-xs"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                      <pre className="p-4 text-sm font-mono overflow-x-auto">
+                        <code className="text-gray-300">{claudeConfigTemplate}</code>
+                      </pre>
+                    </div>
+                    <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                      <p><strong>Config file locations:</strong></p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className="bg-muted p-3 rounded">
+                          <strong className="block mb-1">macOS</strong>
+                          <code className="text-[10px]">~/Library/Application Support/Claude/</code>
+                        </div>
+                        <div className="bg-muted p-3 rounded">
+                          <strong className="block mb-1">Windows</strong>
+                          <code className="text-[10px]">%APPDATA%/Claude/</code>
+                        </div>
+                        <div className="bg-muted p-3 rounded">
+                          <strong className="block mb-1">Linux</strong>
+                          <code className="text-[10px]">~/.config/Claude/</code>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Replace <code className="bg-muted px-1 rounded">YOUR_API_KEY_HERE</code> with your actual API key from the API Keys tab.
+                    </AlertDescription>
+                  </Alert>
+                </TabsContent>
+
+                {/* Gemini CLI Setup */}
+                <TabsContent value="gemini" className="space-y-6">
+                  <Alert className="bg-blue-500/10 border-blue-500/20">
+                    <Terminal className="h-4 w-4 text-blue-500" />
+                    <AlertDescription className="text-blue-700 dark:text-blue-400">
+                      Gemini CLI requires a stdio wrapper to connect to our hosted server. <strong>Your API key will be embedded in the downloaded script</strong> - no need to configure it separately.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        1
+                      </div>
+                      <h3 className="font-semibold mb-2">Download Wrapper</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Get the Python stdio wrapper with your API key
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        2
+                      </div>
+                      <h3 className="font-semibold mb-2">Update Config</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Add the config to your Gemini settings
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-center text-center p-6 border rounded-lg">
+                      <div className="h-12 w-12 rounded-full bg-green-500 text-white flex items-center justify-center text-xl font-bold mb-3">
+                        ✓
+                      </div>
+                      <h3 className="font-semibold mb-2">Start Using</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Restart Gemini CLI and try the tools
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Download Wrapper Script</Label>
+                    {loading ? (
+                      <div className="p-8 border rounded-lg bg-muted/30 text-center">
+                        <p className="text-muted-foreground">Loading API keys...</p>
+                      </div>
+                    ) : apiKeys.filter(key => key.status === 'active').length > 0 ? (
+                      <div className="space-y-3">
+                        {apiKeys.filter(key => key.status === 'active').map((key) => {
+                          // Try to get the full key from multiple possible fields
+                          const keyValue = key.api_key_full || key.api_key || key.key_id || '';
+                          const displayKey = getDisplayKey(keyValue);
+                          
+                          return (
+                            <div key={key.key_id || Math.random()} className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                              <div>
+                                <p className="font-medium">{key.name || 'Unnamed Key'}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Key: {displayKey}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => downloadStdioWrapper(keyValue)}
+                                className="bg-cyan-500 hover:bg-cyan-600"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Script
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-8 border rounded-lg bg-muted/30 text-center">
+                        <AlertCircle className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                        <p className="text-muted-foreground mb-4">No active API keys found</p>
+                        <p className="text-sm text-muted-foreground mb-4">Create an API key in the "API Keys" tab first</p>
+                        <Button variant="outline" onClick={() => {
+                          const tabsList = document.querySelector('[role="tablist"]');
+                          const keysTab = tabsList?.querySelector('[value="keys"]') as HTMLElement;
+                          keysTab?.click();
+                        }}>
+                          Go to API Keys
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Gemini CLI Configuration</Label>
+                    <div className="bg-[#0C0C0C] rounded-lg overflow-hidden border border-border">
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                        <span className="text-xs font-mono text-muted-foreground">config.json</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(geminiConfigTemplate('~/thanos-mcp-stdio.py'))}
+                          className="h-7 text-xs"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                      <pre className="p-4 text-sm font-mono overflow-x-auto">
+                        <code className="text-gray-300">{geminiConfigTemplate('~/thanos-mcp-stdio.py')}</code>
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 text-sm">
+                    <p className="font-medium">Setup Instructions:</p>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>Download the wrapper script using the button above</li>
+                      <li>Make it executable: <code className="bg-muted px-1 rounded">chmod +x thanos-mcp-stdio.py</code></li>
+                      <li>Move to desired location (e.g., home directory)</li>
+                      <li>Update the path in the config above to match your location</li>
+                      <li>Add the config to your Gemini CLI settings</li>
+                      <li>Restart Gemini CLI</li>
+                    </ol>
+                  </div>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      The downloaded script contains your API key. Keep it secure and don't share it.
+                    </AlertDescription>
+                  </Alert>
+                </TabsContent>
+              </Tabs>
 
               <div>
                 <Label className="text-sm font-medium mb-2 block">Server URL</Label>

@@ -12,7 +12,6 @@ import {
 } from '../components/ui/select';
 import { ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
 import { verifyAndRegisterCustomer, getPublicConfig } from '../api';
-import { RegistrationHeader } from '../components/registration/RegistrationHeader';
 
 const AWS_REGIONS = [
   'us-east-1',
@@ -139,8 +138,6 @@ export default function CustomerOnboarding() {
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl" />
       </div>
-
-      <RegistrationHeader />
 
       <div className="relative z-10 flex items-center justify-center p-6 pt-12">
         <div className="w-full max-w-4xl">

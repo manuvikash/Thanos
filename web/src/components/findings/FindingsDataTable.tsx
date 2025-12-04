@@ -70,19 +70,19 @@ export function FindingsDataTable({ findings, totalCount, loading = false, items
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [customerFilter, setCustomerFilter] = useState<string>('all')
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  // const [loadingCustomers, setLoadingCustomers] = useState(false)
 
   // Fetch customers on mount
   useEffect(() => {
     const fetchCustomers = async () => {
-      setLoadingCustomers(true)
+      // setLoadingCustomers(true)
       try {
         const customerList = await getCustomers()
         setCustomers(customerList)
       } catch (error) {
         console.error('Failed to load customers:', error)
       } finally {
-        setLoadingCustomers(false)
+        // setLoadingCustomers(false)
       }
     }
     fetchCustomers()

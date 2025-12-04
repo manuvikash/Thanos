@@ -1,291 +1,262 @@
-# Thanos
+# ⚡ Thanos
 
-**AWS Configuration Drift Detector** - Scan AWS accounts for security misconfigurations in seconds.
+> *"Perfectly balanced, like all things should be."*
 
-## What It Does
+**Cloud security compliance that brings balance to your AWS infrastructure.**
 
-Thanos connects to your AWS accounts, scans resources (S3, IAM, Security Groups), checks them against security rules, and shows you what's wrong.
-
-**Example findings:**
-- ❌ S3 buckets without public access blocks
-- ❌ IAM policies with wildcard permissions
-- ❌ Security groups allowing SSH from 0.0.0.0/0
+Thanos is a serverless cloud security platform that scans AWS accounts for misconfigurations, tracks drift, and keeps your infrastructure perfectly compliant—without the chaos.
 
 ---
 
-## Quick Start
+## 🎯 What It Does
+
+Thanos continuously monitors your AWS infrastructure, detecting security misconfigurations and compliance violations in real-time:
+
+- 🔍 **Automated Scanning** - Scans S3, IAM, Security Groups, VPCs, and more
+- ⚠️ **Instant Findings** - Detects public buckets, overly permissive policies, open security groups
+- 📊 **Compliance Metrics** - Track your security posture with severity-based dashboards
+- 🤖 **AI-Ready** - MCP integration lets AI assistants query your infrastructure
+- 🌍 **Multi-Tenant** - Manage multiple AWS accounts from a single dashboard
+- ⚡ **Serverless** - Built on AWS Lambda, scales automatically, pay only for what you use
+
+**Example Findings:**
+```
+❌ S3 bucket 'prod-data' allows public access
+❌ IAM role 'AdminRole' grants wildcard (*) permissions  
+❌ Security group sg-abc123 allows SSH from 0.0.0.0/0
+✅ 847 resources scanned, 94% compliant
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        React Dashboard                          │
+│          (Vite + TailwindCSS + shadcn/ui)                      │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   API Gateway (HTTP API v2)                     │
+│                    Cognito JWT Authorizer                       │
+└──────┬──────────────┬──────────────┬────────────────────────────┘
+       │              │              │
+       ▼              ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ Scan Handler │ │Config Handler│ │ MCP Server   │
+│   (Lambda)   │ │   (Lambda)   │ │   (Lambda)   │
+└──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+       │                │                 │
+       └────────────────┼─────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────────┐
+        │         DynamoDB              │
+        │  • findings                   │
+        │  • resources                  │
+        │  • rules                      │
+        │  • customers                  │
+        │  • config                     │
+        └───────────────────────────────┘
+```
+
+**Tech Stack:**
+- **Frontend**: React 18, Vite, TailwindCSS, shadcn/ui, TypeScript
+- **Backend**: AWS Lambda (Python 3.12), API Gateway HTTP API v2
+- **Database**: DynamoDB (NoSQL, serverless)
+- **Auth**: Cognito User Pools with JWT
+- **Storage**: S3 for scan metadata
+- **AI Integration**: Model Context Protocol (MCP) server for Claude/Gemini
+- **IaC**: Terraform for infrastructure deployment
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 ```bash
 terraform --version  # >= 1.0
-python3 --version    # >= 3.11
+python3 --version    # >= 3.12
 node --version       # >= 18
-aws configure        # AWS credentials set up
+aws configure        # AWS credentials configured
 ```
 
-### 1. Deploy Backend Infrastructure
-
-Use the Makefile to streamline the deployment process:
+### 1. Deploy Infrastructure
 
 ```bash
-# Initialize Terraform (first time only)
-make tf-init
+# Clone and deploy
+git clone https://github.com/manuvikash/thanos.git
+cd thanos
+make tf-init     # First time only
+make tf-apply    # Deploy everything
 
-# Deploy all infrastructure (packages Lambdas + applies Terraform)
-make tf-apply
-```
-
-This command will:
-- Package all Lambda functions with dependencies
-- Deploy AWS infrastructure (API Gateway, Lambda, DynamoDB, S3, Cognito)
-- Initialize default security rules
-- Set up admin authentication
-
-**Note:** You'll need to confirm the deployment by typing `yes` when prompted.
-
-#### Optional: Configure Admin Email
-
-By default, the admin email is `admin@example.com`. To customize it:
-
-```bash
-cd infra
-terraform apply -var="admin_email=your-email@example.com"
-```
-
-#### Get Admin Credentials
-
-After deployment completes, you'll need to retrieve your admin login credentials:
-
-```bash
+# Get admin credentials
 cd infra
 terraform output -raw admin_temporary_password
 ```
 
-**Default Admin Credentials:**
-- **Email:** `admin@example.com` (or your custom email if you set one)
-- **Password:** The output from the command above (temporary password)
+**Default admin:** `admin@example.com` (password from terraform output)
 
-**Important:** 
-- Save this password securely - you'll need it for your first login
-- You'll be required to change this password on first login
-- The password will only be shown once via Terraform output
-
-### 2. Run Web Application Locally
+### 2. Launch Dashboard
 
 ```bash
-# The .env file is automatically created by make tf-apply
-# Start the development server
 make web-dev
 ```
 
-The application will be available at `http://localhost:3001` (or another port if 3001 is in use).
+Dashboard available at `http://localhost:3001`
 
-### 3. Admin Login
+### 3. Register Your First AWS Account
 
-**How to Login as Admin:**
-
-1. Navigate to `http://localhost:3001/login`
-2. Enter your admin credentials:
-   - **Email:** `admin@example.com` (or your custom email)
-   - **Password:** The temporary password from step 1
-3. You'll be prompted to set a new permanent password
-4. After setting your password, you'll be redirected to the admin dashboard
-
-### 4. Deploy Web UI to S3 (Optional)
-
-To deploy the web application to S3 for production:
-
-```bash
-make deploy-web
-```
-
-Access the deployed application:
-```bash
-cd infra
-terraform output web_url
-```
-
-### 5. Create Customer Audit Role
-
-For customers to allow Thanos to scan their AWS accounts:
-
-```bash
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-aws cloudformation create-stack \
-  --stack-name CloudGoldenGuardAuditRole \
-  --template-body file://cfn/customer-onboarding-role.yaml \
-  --parameters ParameterKey=TrustedAccountId,ParameterValue=$ACCOUNT_ID \
-  --capabilities CAPABILITY_NAMED_IAM
-```
-
-### 6. MCP Server Integration (Optional)
-
-Enable AI assistants like Claude to query compliance data:
-
-```bash
-cd mcp
-./setup.sh  # Creates service account and configures MCP server
-```
-
-Restart Claude Desktop, then ask: *"Show me all non-compliant S3 buckets for customer-prod"*
-
-See [`mcp/README.md`](mcp/README.md) for details.
+1. Navigate to **Dashboard → Onboard Account**
+2. Enter AWS credentials (Access Key ID, Secret, regions)
+3. Click **Register & Scan**
+4. View findings in real-time!
 
 ---
 
-## Application Structure
+## 🤖 AI Integration (MCP)
 
-### Two Portals
+Thanos includes a Model Context Protocol (MCP) server, letting AI assistants like Claude and Gemini query your infrastructure:
 
-1. **Customer Portal** (`/register`) - Public access
-   - Customer onboarding
-   - No authentication required
-   
-2. **Admin Dashboard** (`/dashboard/*`) - Protected
-   - Security findings and metrics
-   - Rules management
-   - Requires Cognito authentication
+### Claude Desktop Setup
 
----
+1. Generate API key in **Dashboard → MCP Integration**
+2. Copy the SSE configuration
+3. Add to `claude_desktop_config.json`:
 
-## What Gets Deployed
-
-### AWS Resources
-
-- **Lambda Functions** (9 total)
-  - Scan handler, Findings handler, Resources handler
-  - Metrics handler, Rules handler, Customers handler
-  - Registration handler, Init handler, Authorizer
-- **API Gateway** - HTTP API with JWT authorization
-- **Cognito** - User pool for admin authentication
-- **DynamoDB Tables** - Findings, Rules, Customers
-- **S3 Buckets** - Snapshots, Rules, Web hosting
-- **CloudWatch Logs** - 7-day retention for all functions
-
-**Estimated Cost:** ~$1-5/month for light usage (serverless pay-per-use)
-
----
-
-## Architecture
-
-```
-┌─────────────┐
-│   Web UI    │ (React + TypeScript)
-│  (S3/Local) │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│  API Gateway    │ (JWT Auth via Cognito)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│      Lambda Functions               │
-│  ┌──────────┐  ┌──────────┐        │
-│  │  Scan    │  │ Findings │  ...   │
-│  └──────────┘  └──────────┘        │
-└────────┬────────────────────────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│    DynamoDB     │      │  S3 Buckets  │
-│ (Findings/Rules)│      │ (Snapshots)  │
-└─────────────────┘      └──────────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│   Customer AWS Account              │
-│   (AssumeRole → Collect Resources)  │
-└─────────────────────────────────────┘
+```json
+{
+  "mcpServers": {
+    "thanos": {
+      "url": "https://your-lambda-url.amazonaws.com",
+      "headers": {
+        "x-api-key": "thanos_mcp_your_key_here"
+      }
+    }
+  }
+}
 ```
 
+### Gemini CLI Setup
+
+1. Download the stdio wrapper script from **MCP Integration** page
+2. Configure in Gemini:
+
+```json
+{
+  "mcpServers": {
+    "thanos": {
+      "command": "python3",
+      "args": ["/path/to/thanos-mcp-stdio.py"]
+    }
+  }
+}
+```
+
+**Example AI Queries:**
+- "Show me all critical security findings"
+- "List S3 buckets with public access enabled"
+- "What's the compliance rate for prod-customer?"
+- "Find all security groups allowing SSH from the internet"
+
 ---
 
-## Development
+## 📋 Features
 
-### Available Make Commands
+### Security Scanning
+- **Resource Discovery**: Auto-discover S3 buckets, IAM roles, security groups, VPCs
+- **Rule Engine**: 50+ built-in security rules, custom rule support
+- **Drift Detection**: Track configuration changes over time
+- **Severity Scoring**: CRITICAL, HIGH, MEDIUM, LOW severity levels
+
+### Dashboard & Reporting
+- **Real-time Metrics**: Compliance rates, findings by severity, trends
+- **Finding Details**: Full resource context, remediation guidance
+- **Timeline View**: Track findings discovered over time
+- **Multi-tenant**: Manage multiple AWS accounts from one dashboard
+
+### Developer Experience
+- **REST API**: Full programmatic access via API Gateway
+- **MCP Server**: AI assistant integration via Model Context Protocol
+- **Webhooks**: SNS notifications for critical findings (coming soon)
+- **CLI Tools**: Scan triggers, config management (coming soon)
+
+---
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+thanos/
+├── infra/              # Terraform infrastructure
+├── lambdas/            # Python Lambda functions
+│   ├── scan_handler/
+│   ├── findings_handler/
+│   ├── mcp_server/
+│   └── common/         # Shared libraries
+├── web/                # React dashboard
+└── Makefile            # Build automation
+```
+
+### Commands
 
 ```bash
-# Development
-make web-dev          # Start Vite dev server
-make fmt              # Format Python and TypeScript code
-make test             # Run all tests
-
 # Infrastructure
-make tf-init          # Initialize Terraform
-make tf-plan          # Plan Terraform changes
-make tf-apply         # Apply Terraform changes (includes packaging)
-make tf-destroy       # Destroy all AWS resources
+make tf-plan          # Preview changes
+make tf-apply         # Deploy changes
+make tf-destroy       # Tear down everything
 
-# Deployment
-make web-build        # Build web UI for production
-make deploy-web       # Deploy web UI to S3
-
-# Cleanup
-make clean            # Remove build artifacts
+# Frontend
+make web-dev          # Development server
+make web-build        # Production build
 ```
 
-### Local Development Workflow
+### Adding Custom Rules
 
-```bash
-# 1. Make code changes
-# 2. Test locally
-make web-dev
+Rules are stored in DynamoDB and evaluated during scans. Add them via the **Configuration** page or directly in DynamoDB:
 
-# 3. Deploy infrastructure changes
-make tf-apply
-
-# 4. Deploy web changes (optional)
-make deploy-web
+```python
+{
+  "rule_id": "S3_001",
+  "name": "S3 Bucket Public Access",
+  "severity": "CRITICAL",
+  "resource_type": "AWS::S3::Bucket"
+}
 ```
 
 ---
 
-## Cleanup
+## 🔐 Security Considerations
 
-### Destroy All Resources
-
-To completely remove all AWS resources and stop incurring costs:
-
-```bash
-make tf-destroy
-```
-
-This command will:
-1. Empty all S3 buckets (including versioned objects)
-2. Destroy all AWS resources (Lambda, API Gateway, DynamoDB, Cognito, etc.)
-3. Remove all infrastructure
-
-**Warning:** This action is irreversible. All data will be permanently deleted.
+- **IAM Permissions**: Scan user needs read-only permissions (`SecurityAudit` policy recommended)
+- **Credential Storage**: AWS credentials encrypted in DynamoDB
+- **API Authentication**: All endpoints protected by Cognito JWT
+- **MCP API Keys**: Scoped per-user, revocable, time-limited
+- **Audit Logs**: All API calls logged in CloudWatch
 
 ---
 
-## Features
+## 📚 Documentation
 
-✅ **Admin Authentication** - Secure Cognito-based login  
-✅ **Customer Onboarding** - Self-service registration portal  
-✅ **Multi-region Scanning** - Scan resources across AWS regions  
-✅ **Custom Rules** - YAML-based security policies  
-✅ **Multi-tenant** - Manage multiple AWS accounts  
-✅ **Real-time Metrics** - Dashboard with findings analytics  
-✅ **MCP Integration** - AI assistants can query compliance data  
-✅ **Theme Support** - Midnight, Ocean Light, and Teal Dark themes  
-✅ **Serverless** - No servers to manage, pay only for what you use  
+- [MCP Integration Guide](mcp/README.md) - AI assistant setup
 
 ---
 
-## Tech Stack
+## 🤝 Contributing
 
-**Frontend:** React, TypeScript, TailwindCSS, Vite, AWS Amplify  
-**Backend:** AWS Lambda (Python 3.11), API Gateway, DynamoDB  
-**Auth:** AWS Cognito  
-**Infrastructure:** Terraform  
-**Storage:** S3, DynamoDB  
+Contributions welcome! This project is under active development.
 
 ---
 
-## License
+## 📄 License
 
-See [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+> *"The hardest choices require the strongest wills."* - Make your cloud infrastructure secure, one scan at a time.
+
+**Made with ⚡ by the Thanos team**

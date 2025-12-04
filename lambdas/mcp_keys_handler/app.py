@@ -7,6 +7,7 @@ import os
 import secrets
 import time
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Dict, Any
 
 import boto3
@@ -16,9 +17,25 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
+def decimal_default(obj):
+    """Convert Decimal to float for JSON serialization."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+# Get table name from environment
+table_name = os.environ.get('MCP_KEYS_TABLE', '')
+
+# Initialize DynamoDB resource with explicit region (will use Lambda's region)
 dynamodb = boto3.resource('dynamodb')
-table_name = os.environ['MCP_KEYS_TABLE']
-table = dynamodb.Table(table_name)
+
+def get_table():
+    """Get DynamoDB table instance."""
+    if not table_name:
+        raise ValueError("MCP_KEYS_TABLE environment variable not set")
+    return dynamodb.Table(table_name)
 
 
 def generate_api_key() -> str:
@@ -37,14 +54,20 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     - POST /mcp/keys/validate - Validate API key (internal)
     """
     
+    logger.info(f"Received event: {json.dumps(event)}")
+    
     http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method'))
     path = event.get('path', event.get('rawPath', ''))
+    
+    logger.info(f"Method: {http_method}, Path: {path}")
     
     # Get user from authorizer context
     # API Gateway v2 JWT authorizer puts claims in requestContext.authorizer.jwt.claims
     authorizer = event.get('requestContext', {}).get('authorizer', {})
     jwt_claims = authorizer.get('jwt', {}).get('claims', {}) if 'jwt' in authorizer else authorizer.get('claims', {})
     user_email = jwt_claims.get('email')
+    
+    logger.info(f"User email from JWT: {user_email}")
     
     if not user_email:
         logger.warning(f"No user email found. Authorizer context: {json.dumps(authorizer)}")
@@ -76,10 +99,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
     
     except Exception as e:
-        print(f"Error processing request: {e}")
+        logger.error(f"Error processing request: {e}", exc_info=True)
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps({'error': str(e)})
         }
 
@@ -96,6 +122,7 @@ def create_api_key(user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
         expires_at = created_at + (expires_days * 24 * 60 * 60)
         
         # Store in DynamoDB
+        table = get_table()
         table.put_item(
             Item={
                 'api_key': api_key,
@@ -122,7 +149,7 @@ def create_api_key(user_email: str, event: Dict[str, Any]) -> Dict[str, Any]:
                 'created_at': created_at,
                 'expires_at': expires_at,
                 'message': 'API key created successfully. Save this key - it will not be shown again.'
-            })
+            }, default=decimal_default)
         }
     except Exception as e:
         logger.error(f"Error creating API key: {e}", exc_info=True)
@@ -140,12 +167,17 @@ def list_api_keys(user_email: str) -> Dict[str, Any]:
     """List all API keys for a user."""
     
     try:
+        logger.info(f"Listing API keys for user: {user_email}")
+        table = get_table()
+        logger.info(f"Querying table: {table_name} with user_email: {user_email}")
+        
         response = table.query(
             IndexName='user-email-index',
             KeyConditionExpression=Key('user_email').eq(user_email)
         )
         
         keys = response.get('Items', [])
+        logger.info(f"Found {len(keys)} keys for user {user_email}")
         
         # Sort by created_at descending (newest first)
         keys.sort(key=lambda x: x.get('created_at', 0), reverse=True)
@@ -177,7 +209,7 @@ def list_api_keys(user_email: str) -> Dict[str, Any]:
             'body': json.dumps({
                 'keys': keys,
                 'count': len(keys)
-            })
+            }, default=decimal_default)
         }
     except Exception as e:
         logger.error(f"Error listing API keys: {e}", exc_info=True)
@@ -195,6 +227,7 @@ def revoke_api_key(user_email: str, api_key_suffix: str) -> Dict[str, Any]:
     """Revoke (delete) an API key."""
     try:
         # Find the key by suffix
+        table = get_table()
         response = table.query(
             IndexName='user-email-index',
             KeyConditionExpression=Key('user_email').eq(user_email)
@@ -273,6 +306,7 @@ def validate_api_key(event: Dict[str, Any]) -> Dict[str, Any]:
         }
     
     try:
+        table = get_table()
         response = table.get_item(Key={'api_key': api_key})
         item = response.get('Item')
         
@@ -313,7 +347,7 @@ def validate_api_key(event: Dict[str, Any]) -> Dict[str, Any]:
                 'valid': True,
                 'user_email': item['user_email'],
                 'name': item.get('name')
-            })
+            }, default=decimal_default)
         }
     
     except Exception as e:

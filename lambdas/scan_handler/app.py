@@ -38,7 +38,73 @@ BASE_CONFIGS_TABLE = os.environ.get("BASE_CONFIGS_TABLE", "")
 FINDINGS_TABLE = os.environ.get("FINDINGS_TABLE", "")
 RESOURCES_TABLE = os.environ.get("RESOURCES_TABLE", "")
 SNS_TOPIC_ARN = os.environ.get("ALERTS_TOPIC_ARN", "")
+ALERT_CONFIGS_TABLE = os.environ.get("ALERT_CONFIGS_TABLE", "")
 sns_client = boto3.client("sns")
+dynamodb = boto3.resource('dynamodb')
+
+def load_alert_config():
+    """
+    Load alert configuration from DynamoDB.
+    Returns default config if table not configured or no config found.
+    """
+    if not ALERT_CONFIGS_TABLE:
+        # Default: enabled, CRITICAL and HIGH severity
+        return {
+            'enabled': True,
+            'severity_levels': ['CRITICAL', 'HIGH'],
+            'email_addresses': []
+        }
+    
+    try:
+        table = dynamodb.Table(ALERT_CONFIGS_TABLE)
+        response = table.get_item(
+            Key={
+                'PK': 'CONFIG#global',
+                'SK': 'v1'
+            }
+        )
+        
+        if 'Item' in response:
+            config = response['Item']
+            return {
+                'enabled': config.get('enabled', True),
+                'severity_levels': config.get('severity_levels', ['CRITICAL', 'HIGH']),
+                'email_addresses': config.get('email_addresses', [])
+            }
+        else:
+            # No config found, use defaults
+            return {
+                'enabled': True,
+                'severity_levels': ['CRITICAL', 'HIGH'],
+                'email_addresses': []
+            }
+    except Exception as e:
+        logger.warning(f"Failed to load alert config, using defaults: {e}")
+        return {
+            'enabled': True,
+            'severity_levels': ['CRITICAL', 'HIGH'],
+            'email_addresses': []
+        }
+
+
+def should_alert(finding, alert_config):
+    """
+    Check if a finding should trigger an alert based on configuration.
+    
+    Args:
+        finding: Finding dict with severity field
+        alert_config: Alert configuration dict
+        
+    Returns:
+        bool: True if alert should be sent
+    """
+    if not alert_config.get('enabled', True):
+        return False
+    
+    severity = str(finding.get('severity', '')).upper()
+    severity_levels = [s.upper() for s in alert_config.get('severity_levels', [])]
+    
+    return severity in severity_levels
 
 def publish_critical_alert(finding):
     """
@@ -49,7 +115,7 @@ def publish_critical_alert(finding):
         # Topic not configured; silently skip to avoid breaking scans
         return
 
-    subject = f"[CRITICAL] Finding: {finding.get('rule_id', 'unknown')}"
+    subject = f"[{finding.get('severity', 'ALERT').upper()}] Finding: {finding.get('rule_id', 'unknown')}"
     message = {
         "tenant_id": finding.get("tenant_id"),
         "rule_id": finding.get("rule_id"),
@@ -190,13 +256,21 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.info(f"Writing {len(evaluated_resources)} resources to inventory")
             put_resources(RESOURCES_TABLE, evaluated_resources)
         
-        # Step 6: Write findings to DynamoDB
+        # Step 6: Write findings to DynamoDB and send alerts
         if findings:
             put_findings(FINDINGS_TABLE, findings)
+            
+            # Load alert configuration
+            alert_config = load_alert_config()
+            logger.info(f"Alert config loaded: enabled={alert_config.get('enabled')}, "
+                       f"severity_levels={alert_config.get('severity_levels')}")
+            
+            # Send alerts for matching findings
             for f in findings:
                 fd = f.to_dict() if hasattr(f, "to_dict") else f
-                if str(fd.get("severity", "")).lower() == "high":
+                if should_alert(fd, alert_config):
                     publish_critical_alert(fd)
+                    logger.info(f"Alert sent for finding: {fd.get('rule_id')} (severity: {fd.get('severity')})")
         
         # Calculate compliance statistics
         compliance_stats = {

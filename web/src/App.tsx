@@ -18,6 +18,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Login'
 import ConfigManagement from './pages/ConfigManagement'
 import MCPSettingsPage from './pages/MCPSettingsPage'
+import AlertsConfiguration from './pages/AlertsConfiguration'
 import { configureAuth } from './utils/auth'
 import { RequireAuth } from './components/auth/RequireAuth'
 
@@ -136,11 +137,17 @@ function App() {
               }
             />
 
-            {/* Configuration Management route */}
-            <Route path={ROUTES.CONFIG} element={<ConfigManagement />} />
+            {/* Onboard Account route */}
+            <Route path={ROUTES.ONBOARD} element={<CustomerOnboarding />} />
 
             {/* MCP Integration route */}
             <Route path={ROUTES.MCP} element={<MCPSettingsPage />} />
+
+            {/* Configuration Management route */}
+            <Route path={ROUTES.CONFIG} element={<ConfigManagement />} />
+
+            {/* Alerts Configuration route */}
+            <Route path={ROUTES.ALERTS} element={<AlertsConfiguration />} />
 
             {/* Catch-all route for invalid paths - redirect to default with toast notification */}
             <Route path="*" element={<InvalidRouteHandler onInvalidRoute={handleInvalidRoute} />} />

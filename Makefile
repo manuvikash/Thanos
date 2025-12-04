@@ -118,6 +118,12 @@ package-lambdas:
 	@cp lambdas/mcp_server/server_hosted.py dist/mcp_server_build/
 	@cd dist/mcp_server_build && zip -r ../mcp_server.zip . -q
 	@rm -rf dist/mcp_server_build
+
+	@echo "Packaging alerts_config_handler..."
+	@mkdir -p dist/alerts_config_handler_build
+	@cp lambdas/alerts_config_handler/app.py dist/alerts_config_handler_build/
+	@cd dist/alerts_config_handler_build && zip -r ../alerts_config_handler.zip . -q
+	@rm -rf dist/alerts_config_handler_build
 	
 	@echo "Packaging groups_handler..."
 	@mkdir -p dist/groups_handler_build

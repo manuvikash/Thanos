@@ -71,7 +71,8 @@ resource "aws_iam_role_policy" "scan_handler" {
         ]
         Resource = [
           aws_dynamodb_table.base_configs.arn,
-          "${aws_dynamodb_table.base_configs.arn}/index/*"
+          "${aws_dynamodb_table.base_configs.arn}/index/*",
+          aws_dynamodb_table.alert_configs.arn
         ]
       },
       {
@@ -126,12 +127,13 @@ resource "aws_lambda_function" "scan_handler" {
 
   environment {
     variables = {
-      SNAPSHOTS_BUCKET   = aws_s3_bucket.snapshots.id
-      RULES_BUCKET       = aws_s3_bucket.rules.id
-      BASE_CONFIGS_TABLE = aws_dynamodb_table.base_configs.name
-      FINDINGS_TABLE     = aws_dynamodb_table.findings.name
-      RESOURCES_TABLE    = aws_dynamodb_table.resources_inventory.name
-      ALERTS_TOPIC_ARN   = aws_sns_topic.critical_findings_alerts.arn
+      SNAPSHOTS_BUCKET     = aws_s3_bucket.snapshots.id
+      RULES_BUCKET         = aws_s3_bucket.rules.id
+      BASE_CONFIGS_TABLE   = aws_dynamodb_table.base_configs.name
+      FINDINGS_TABLE       = aws_dynamodb_table.findings.name
+      RESOURCES_TABLE      = aws_dynamodb_table.resources_inventory.name
+      ALERTS_TOPIC_ARN     = aws_sns_topic.critical_findings_alerts.arn
+      ALERT_CONFIGS_TABLE  = aws_dynamodb_table.alert_configs.name
     }
   }
 
