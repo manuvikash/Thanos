@@ -30,68 +30,62 @@ Configuration drift quietly snowballs into outages and security breaches. A "tem
 ## Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Clients["Client Layer"]
-        Browser["🌐 React Dashboard\nVite · TailwindCSS · shadcn/ui"]
-        AI["🤖 AI Assistant\nClaude · Gemini"]
-        NewCustomer["🏢 New Customer\nSelf-Service Registration"]
+flowchart LR
+    subgraph Users["Users"]
+        direction TB
+        Admin["Admin"]
+        NewCust["New Customer"]
+        AiBot["AI Assistant"]
     end
 
-    subgraph AuthLayer["Authentication"]
-        Cognito["🔑 AWS Cognito\nUser Pools · JWT Tokens"]
+    subgraph AuthGW["Auth & API Gateway"]
+        direction TB
+        Cognito["AWS Cognito\nUser Pools · JWT"]
+        ApiGW["API Gateway HTTP v2\nJWT Authorizer"]
     end
 
-    subgraph APILayer["API Layer"]
-        APIGW["⚡ API Gateway HTTP v2\nJWT Authorizer · CORS"]
-        MCPServer["λ MCP Server\nSSE · stdio transport"]
+    subgraph Functions["Lambda Functions"]
+        direction TB
+        ScanFn["scan_handler\nFull scan lifecycle"]
+        QueryFn["findings · resources\nmetrics handlers"]
+        AdminFn["config · groups\ncustomers · registration"]
+        McpFn["MCP Server\nAI tool interface"]
     end
 
-    subgraph Compute["Lambda Functions (Python 3.12)"]
-        ScanH["λ scan_handler\nOrchestrates full scan lifecycle"]
-        FindH["λ findings_handler\nQuery & filter findings"]
-        ResH["λ resources_handler\nQuery resource inventory"]
-        ConfH["λ config_handler\nBase configs & group policies"]
-        MetH["λ metrics_handler\nCompliance trends & KPIs"]
-        RegH["λ registration_handler\nCustomer onboarding"]
-        CustH["λ customers_handler\nTenant management"]
+    subgraph DataLayer["Data & Notifications"]
+        direction TB
+        Dynamo["DynamoDB\nfindings · resources\nconfigs · customers"]
+        S3Snap["S3 Snapshots\nAES-256 encrypted"]
+        AlertSNS["SNS\nEmail Alerts"]
     end
 
-    subgraph DataLayer["Storage"]
-        DDB["📦 DynamoDB\nfindings · resources · configs · customers"]
-        S3Snap["🪣 S3 Snapshots\nAES-256 · versioned · 90-day retention"]
+    subgraph CustomerAcc["Customer AWS Account"]
+        direction TB
+        ReadRole["Read-Only IAM Role\nCloudFormation deployed"]
+        AwsRsrc["S3 · IAM · EC2\nSG · RDS · Lambda"]
     end
 
-    subgraph Notify["Notifications"]
-        SNS["📣 Amazon SNS\nHIGH severity → Email"]
-    end
+    Admin --> Cognito
+    NewCust --> ApiGW
+    AiBot --> McpFn
 
-    subgraph CustomerCloud["Customer AWS Account"]
-        CFRole["☁️ CloudFormation\nIAM Role Provisioning"]
-        IAMRole["🔐 Read-Only Audit Role\nSecurityAudit + ViewOnlyAccess"]
-        AWSResources["AWS Resources\nS3 · IAM · EC2 · SG · RDS · Lambda"]
-    end
+    Cognito -->|"JWT Token"| ApiGW
+    McpFn --> ApiGW
 
-    Browser <-->|"HTTPS"| Cognito
-    Browser -->|"JWT Auth"| APIGW
-    AI -->|"MCP Protocol"| MCPServer
-    MCPServer -->|"REST"| APIGW
-    NewCustomer -->|"CloudFormation URL"| CFRole
+    ApiGW --> ScanFn
+    ApiGW --> QueryFn
+    ApiGW --> AdminFn
 
-    CFRole --> IAMRole
+    ScanFn -->|"STS AssumeRole + ExternalID"| ReadRole
+    ReadRole -->|"read-only"| AwsRsrc
+    AwsRsrc -->|"resource data"| ScanFn
 
-    APIGW --> ScanH & FindH & ResH & ConfH & MetH & RegH & CustH
+    ScanFn --> S3Snap
+    ScanFn --> Dynamo
+    ScanFn -->|"HIGH severity"| AlertSNS
 
-    ScanH -->|"STS AssumeRole\n+ ExternalID Guard"| IAMRole
-    IAMRole -->|"Read-only API calls"| AWSResources
-    AWSResources -->|"Resource configs"| ScanH
-
-    ScanH -->|"JSON snapshot"| S3Snap
-    ScanH -->|"Findings + resources"| DDB
-    ScanH -->|"Critical alerts"| SNS
-
-    FindH & ResH & MetH & ConfH & CustH & RegH --> DDB
-
-    SNS -->|"Email"| Browser
+    QueryFn --> Dynamo
+    AdminFn --> Dynamo
 ```
 
 ### How a Scan Works
